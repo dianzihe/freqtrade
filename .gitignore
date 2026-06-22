@@ -4,7 +4,6 @@ config*.json
 *.sqlite-shm
 *.sqlite-wal
 logfile.txt
-user_data/*
 !user_data/strategy/sample_strategy.py
 !user_data/notebooks
 !user_data/models
@@ -12,6 +11,13 @@ user_data/*
 user_data/freqaimodels/*
 user_data/models/*
 user_data/notebooks/*
+user_data/data/*
+user_data/backtest_results/*
+user_data/intraday_time_window_report/*
+user_data/plots/*
+user_data/*.html
+user_data/*.json
+user_data/*.png
 freqtrade-plot.html
 freqtrade-profit-plot.html
 freqtrade/rpc/api_server/ui/*
