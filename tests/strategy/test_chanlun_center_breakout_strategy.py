@@ -1,6 +1,6 @@
 import pandas as pd
 
-from user_data.strategies.ChanlunCenterBreakoutStrategy import ChanlunCenterBreakoutStrategy
+from user_data.strategies.chanlun_center_breakout_strategy import ChanlunCenterBreakoutStrategy
 
 
 def test_chanlun_strategy_maps_core_signals_to_freqtrade_columns() -> None:

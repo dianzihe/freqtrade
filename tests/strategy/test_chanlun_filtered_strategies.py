@@ -1,6 +1,6 @@
 import pandas as pd
 
-from user_data.strategies.ChanlunFilteredStrategies import (
+from user_data.strategies.chanlun_filtered_strategies import (
     ChanlunMaRsiSecondBuyStrategy,
     ChanlunMacdDivergenceStrategy,
     ChanlunRsiTimingStrategy,

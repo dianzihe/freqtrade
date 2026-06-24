@@ -2,10 +2,10 @@
 
 ## 环境信息
 
-- 项目路径：`F:\source\freqtrade`
-- Python 版本：3.13.12
+- 项目路径：`E:\source\freqtrade`（已从 F 盘迁移）
+- Python 版本：3.11.9（managed）
 - 虚拟环境：`.venv/`（Windows 路径：`.venv\Scripts\activate`）
-- 安装版本：freqtrade 2026.6-dev-890fd8044（开发分支）
+- 安装版本：freqtrade 2026.6-dev-2e730c2f7（开发分支）
 
 ## 安装状态
 

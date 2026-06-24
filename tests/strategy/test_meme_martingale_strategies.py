@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pandas as pd
 
-from user_data.strategies.MemeMartingaleStrategies import (
+from user_data.strategies.meme_martingale_strategies import (
     MemeAntiMartingaleTrendStrategy,
     MemeHedgeProxyMartingaleStrategy,
     MemeLimitedDcaMartingaleStrategy,

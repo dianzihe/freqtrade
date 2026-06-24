@@ -1,0 +1,1554 @@
+Aliens on Earth
+Early Detection of Latent Microstructure
+Regimes
+in Limit Order Books
+Prakul Sunil Hiremath
+prakulhiremath@vtu.ac.in
+Vruksha Arun Hiremath
+vrukshahiremath@klecbalc.edu.in
+Department of Computer Science and Engineering
+Visvesvaraya Technological University, Belagavi
+Department of Business Administration
+K.L.E. Society’s College of Business Administration
+April 24, 2026
+arXiv:2604.20949v1  [cs.LG]  22 Apr 2026
+Limit Order Books
+Abstract
+Limit order books can transition abruptly from stable to stressed
+conditions, yet standard early-warning signals—such as order flow
+imbalance and short-term volatility—are reactive by construction:
+they respond to stress already underway rather than to its precursors.
+We formalise this limitation via a three-regime causal data-
+generating process (stable→latent build-up→stress) in which
+stress onset is delayed relative to a preceding build-up phase, cre-
+ating a prediction window. We show that the latent build-up regime
+is identifiable under mild conditions on temporal drift and regime
+persistence, and derive two complementary guarantees: (i) a suffi-
+cient drift-to-noise condition for strictly positiveexpectedlead-time
+(Proposition 1), and (ii) a lower bound on the probability of detec-
+tion before stress onset as a function of SNR and build-up duration
+(Proposition 2). We provide a complete, rigorous proof of Proposi-
+tion 2 that carefully distinguishes the CUSUM stopping time from
+the CUSUM partial sum, closing the gap between the concentration
+argument and the detection claim.
+Building on this, we propose a trigger-based detector combining
+(i) MAX aggregation of uncertainty and drift channels, (ii) a rising-
+edge condition, and (iii) an adaptive threshold. Across 200 simulation
+runs, the method achieves mean lead-time +18.6±3.2 timesteps (95%
+CI), precision 1.00±0.00, and coverage 0.54±0.06. We provide a
+conditional breakdown of the 46% missed detection rate, showing it
+is concentrated in short build-up, high-noise parameter cells consis-
+tent with the theoretical bounds. Our method outperforms CUSUM,
+BOCPD, HMM thresholding, and imbalance/volatility baselines un-
+der the evaluated settings.
+In a preliminary illustrative real-data application on one week of
+BTC/USDT order book data (1 Hz, 5 labelled events), the detector
+achieves mean lead-time +38±21 seconds, precision 1.00, and cover-
+age 0.80, while baselines exhibit negative lead-times. Depth erosion
+and HMM entropy account for over 99% of first-trigger events, pro-
+viding an interpretable mechanism consistent with the causal model.
+These results are preliminary and based on a small number of
+events; performance degrades in low-SNR, short build-up regimes,
+consistent with the theoretical bounds.
+Keywords:market microstructure; liquidity stress; early warning signals; hidden
+Markov models; change-point detection; high-frequency trading; regime detec-
+tion; limit order book
+Code & data available atGitHub·Zenodo
+Limit Order Books
+1 Introduction
+The problem: reactive signals in fast markets.Modern electronic limit order books
+(LOBs) can transition from abundant liquidity to acute stress in seconds (Gould et al.,
+2013). The practitioner toolkit for detecting such transitions—order flow imbalance, bid–
+ask spread widening, volatility spikes—shares a structural flaw: every signal in this toolkit
+is aconsequenceof stress, not its precursor. A detector calibrated on imbalance or volatility
+will, by construction, fire at timeτ≥σ, whereσis the onset of visible stress. Zero or
+negative lead-time is not a tuning failure; it is the logical outcome of measuring observables
+that aredefinedby the regime you are trying to predict.
+The gap: latent build-up is untapped.A natural question is whether stress is truly
+abrupt or whether it is preceded by a latent deterioration phase invisible to threshold-based
+detectors. Microstructure theory provides intuition: market depth is consumed gradually
+as informed traders accumulate positions (Kyle, 1985; Bouchaud et al., 2009), order-flow
+toxicity builds before it is reflected in prices (Easley et al., 2012), and inventory imbalances
+at market-makers widen spreads with delay (Hasbrouck, 1991). Yet no existing detection
+frameworkexploitsthis temporal structure to achieve systematically positive lead-time.
+What we add.This paper provides four concrete contributions.
+1.A causal regime model with formalised identifiability.We construct a three-
+regime DGP—stable, latent build-up, stress— in which build-up produces persistent
+but weak drift in LOB features before stress materialises. We prove that the latent
+regime sequence is identifiable from observations under conditions on temporal drift
+and regime persistence (Theorem 1).
+2.Two complementary theoretical guarantees with complete proofs.Proposi-
+tion 1 derives a sufficient condition on the drift-to-noise ratioηunder whichexpected
+Limit Order Books
+lead-time is positive. Proposition 2 sharpens this to a closed-form lower bound on
+P(τ < σ)—the probability that detection occurs before the stress onset—as an explicit
+function ofη, build-up durationT 1, and false-alarm levelδ. The proof of Proposi-
+tion 2 carefully handles the distinction between the CUSUM stopping time ˆsand the
+CUSUM partial sumG T1, providing a rigorous path from concentration inequality to
+stopping-time guarantee via a coupling argument. Both bounds are monotone inη
+andT 1, directly connecting theory to the empirical robustness results.
+3.A trigger-based detector with formal foundations and theoretically grounded
+MAX aggregation.We replace heuristic thresholding with a formalised MAX-
+channel aggregation and a derivative-based rising-edge condition. We justify the
+MAX aggregation via a worst-case detection argument under explicit sparsity and
+weak-correlation assumptions, and acknowledge where those assumptions may not
+hold in real LOBs. We propose an adaptive variant that recalibrates thresholds on-
+line.
+4.Rigorous empirical evaluation on both simulated and real data, includ-
+ing a conditional breakdown of missed detections.We benchmark against
+CUSUM, BOCPD, HMM posterior thresholding, and classical imbalance/volatility
+detectors across 200 simulation runs, reporting means, 95% confidence intervals, and
+precision–recall frontiers. We provide a conditional analysis of the 46% missed de-
+tection rate, showing it is structurally predicted by the theory. We further report a
+preliminary illustrative real-data application on one week of BTC/USDT LOB data,
+finding consistent positive lead-times while all baselines remain reactive.
+Scope and limitations.The primary empirical contribution is a rigorous simulation
+study providing 200-run statistics under controlled, ground-truth-labelled conditions. Sec-
+tion 9 reports a preliminary illustrative real-data application on BTC/USDT order book
+Limit Order Books
+data that is qualitatively consistent with the simulation findings. We do not claim the
+method is production-ready; we claim it identifies a tractable detection signal whose theo-
+retical underpinnings are formalised and whose simulation and preliminary real-data results
+both motivate a full-scale real-data study.
+On the transition matrix structure.The transition matrixPin equation (1) enforces
+a causal ordering by disallowing direct transitions 0→2 and 1→0. This means the stress
+regime returns only to the stable regime (2→0), not to the build-up regime. This is a
+deliberate modelling choice that encodes the assumption that post-stress recovery passes
+through a full stable phase before any new build-up episode begins. We acknowledge this is
+a simplification: in practice, cascading stress episodes—where one stress event immediately
+precedes another build-up—are possible, and the transition matrix can be generalised to
+allow 2→1 transitions at the cost of additional complexity in the identifiability argument.
+2 Related Work
+LOB microstructure and liquidity.Gould et al. (2013) provide a comprehensive sur-
+vey of LOB models. Cont et al. (2014) study the price impact of order book events.
+Bouchaud et al. (2009) document the gradual digestion of supply and demand imbalances,
+supporting the existence of a latent deterioration phase.
+Regime switching and HMMs.Hamilton’s (1989) Markov-switching model is the
+canonical regime framework in economics; Rabiner (1989) establish HMM inference for
+sequential data. Our identifiability result extends the classical picture by exploitingtem-
+poral driftrather than static emission separation.
+Limit Order Books
+Change-point detection.CUSUM (Page, 1954) and BOCPD (Adams and MacKay,
+2007) are standard sequential change-point methods. Both target distributional shifts in
+observed data and are therefore inherently reactive when the signal of interest is latent.
+We include both as baselines.
+Early warning in financial markets.Easley et al. (2012) introduce PIN and VPIN as
+flow-toxicity measures that carry some predictive content for stress; these remain reactive
+in our empirical comparison. Cartea et al. (2015) discuss algorithmic responses to liquidity
+events but do not address advance detection. To our knowledge, no prior work formalises
+apositive lead-timeguarantee for LOB stress detection.
+3 Model and Identifiability
+3.1 Latent Regime Structure
+Let (Ω,F,P) be a probability space. We model the LOB as driven by an unobserved
+Markov chain{Z t}t≥1 with state spaceZ={0,1,2}and transition matrixP∈[0,1] 3×3:
+P=
+
+
+1−p 01 p01 0
+0 1−p 12 p12
+p20 0 1−p 20
+
+
+,(1)
+where transitions from regime 0 to 2 and from regime 1 to 0 are disallowed, encoding
+the causal ordering stable→build-up→stress. The expected dwell time in the build-up
+regime isE[dwell 1] = 1/p 12, which determines the width of the prediction window. As
+noted in the introduction, the blockP 20 = 0 (no direct return from stress to build-up) is
+a modelling simplification; extensions allowingp 21 >0 are straightforward but complicate
+the identifiability argument and are left for future work.
+Limit Order Books
+The regimes correspond to:
+•Z t = 0 (stable): tight bid–ask spreads, high depth, low volatility, balanced order flow;
+•Z t = 1 (latent build-up): gradual depth erosion, mild spread widening, slightly ele-
+vated imbalance—changes that remain below standard detection thresholds individ-
+ually;
+•Z t = 2 (stress): sharp spread widening, depth collapse, elevated volatility, order-flow
+disruption.
+3.2 Observation Model
+At eachtwe observeX t ∈R d, a feature vector derived from the LOB snapshot. The
+emission process is:
+Xt =µ Zt +δ t ·1[Z t = 1] +ε t,(2)
+whereµ z ∈R d is the regime-conditional mean,ε t
+i.i.d.
+∼ N(0,Σ) is observation noise, and
+δt is astructured driftactive only in the build-up regime.
+Assumption 1(Temporal drift).During a build-up episode of durationT 1, the drift sat-
+isfiesδ t =α·(t−t entry)·vfor someα >0and unit vectorv∈R d, so thatE[X t |Z t = 1]
+increases monotonically along directionvthroughout the episode.
+Assumption 2(Emission separation).The stress regime has a distinct emission distribu-
+tion:∥µ 2 −µ 0∥Σ−1 ≥γ >0.
+Assumption 3(Regime persistence).p 12 ∈(0,1)andp 01 ∈(0,1), so all regimes are
+visited infinitely often asT→ ∞.
+Limit Order Books
+3.3 Identifiability
+Theorem 1(Identifiability via temporal structure).Under Assumptions 1–3, the latent
+regime sequence{Z t}T
+t=1 is identifiable up to label permutation from{X t}T
+t=1 in the limit
+T→ ∞.
+Proof.We argue by distinguishability of the three regimes in the joint distribution of
+(Xt, Xt+1, . . . , Xt+k) for anyk≥1.
+Step 1: Distinguishing the stable regime from the build-up regime.Under the
+stable regime (Z t = 0), the observations are i.i.d. fromN(µ 0,Σ) conditional on the regime
+persisting. Under the build-up regime (Z t = 1), by Assumption 1,E[X t+s |Z t+s = 1] =
+µ1 +αs·vfors= 0,1, . . .This produces a monotonically increasing conditional mean along
+vthat cannot be produced by any stationary distribution. Formally, the auto-covariance
+Cov(v⊤Xt, v ⊤Xt+s |Z t =Z t+s = 1) carries an additional positive deterministic component
+of orderα 2srelative to the noise covariancev ⊤Σv. For any fixed noise level Σ, this is
+detectable asT→ ∞via a standard trend test on the projected sequence{v ⊤Xt}.
+Step 2: Distinguishing the stress regime.By Assumption 2,∥µ 2−µ0∥Σ−1 ≥γ >0,
+so the stress regime is identifiable from the stable regime by its stationary mean alone.
+Combined with the transition structure in (1), the stress regime always follows a build-up
+episode, providing additional sequential context for identification.
+Step 3: Label assignment.Given identifiability of the three distinct sequential
+patterns (stable: stationary; build-up: monotone drift; stress: high-mean stationary), the
+mapping to labels{0,1,2}is unique up to permutation by the causal ordering encoded in
+P.
+Remark 1.The identifiability argument fails ifα= 0(no drift) or if the noise covariance
+Σis so large thatα 2T≪v ⊤Σv. The following proposition formalises this constraint.
+Limit Order Books
+3.4 Sufficient Condition for Positive Lead-Time
+Proposition 1(Drift–noise condition for early detection).Letη=α/
+√
+v⊤Σvdenote the
+signal-to-noise ratio of the drift. A detector based on the projected sequence{v⊤Xt}achieves
+strictly positive expected lead-time if
+η >
+s
+2 log(1/δ)
+T1
+,(3)
+whereT 1 = 1/p12 is the expected build-up duration andδis the target false-alarm probability.
+Proof.The projected observation under the build-up regime satisfiesy t =v ⊤Xt =c 0 +
+α(t−t entry)+ξ t, whereξ t ∼ N(0, v ⊤Σv). A CUSUM statistic on{y t}accumulates evidence
+at rate proportional toηper timestep. Standard CUSUM theory (Moustakides, 1986) gives
+that the expected detection time satisfiesE[τ−t entry]≤ 2 log(1/δ)
+η2 . For this to be strictly
+less thanT 1—ensuring detection before the build-up transitions to stress—condition (3) is
+sufficient.
+Remark 2.Condition(3)is informative: it says that positive lead-time requires either
+a strong drift (αlarge), low noise (Σsmall), or a long build-up phase (T 1 large). In
+the robustness experiments of Section 6.8, we directly vary these parameters and observe
+behaviour consistent with the bound.
+3.5 Probability Guarantee for Early Detection
+The preceding proposition characterises whenexpectedlead-time is positive. We now
+sharpen this to aprobabilitystatement: under what conditions does the detector fire before
+the stress onset with high probability?
+Proposition 2(Probability of early detection).Under the model of Section 3 with linear
+drift (Assumption 1), Gaussian noiseξ t ∼ N(0, σ 2)withσ 2 =v ⊤Σv, and a CUSUM
+Limit Order Books
+detector ony t =v ⊤Xt with thresholdh= log(1/δ)and false-alarm levelδ∈(0,1), the
+probability that the CUSUM stopping timeˆssatisfiesˆs≤T 1 (detection occurs within the
+build-up episode) is:
+P(ˆs≤T1)≥1−exp
+
+− η2T1
+2 +
+p
+2T1 log(1/δ)
+
+−δ,(4)
+whereη=α/σis the per-step drift-to-noise ratio andT 1 = 1/p12 is the expected build-up
+duration. In particular, for fixedδ, the bound increases monotonically inηand inT 1.
+Proof.Let the build-up episode have durationT 1. The projected observation at steps
+within the episode isy s =c+αs+ξ s withξ s
+i.i.d.
+∼ N(0, σ 2).
+CUSUM statistic definition.We use the standard sequential CUSUM:
+Cs = max
+ 
+0, C s−1 +y s −c− α
+2
+
+, C 0 = 0,(5)
+with stopping time ˆs= inf{s≥1 :C s > h},h= log(1/δ).
+Key distinction: stopping time vs partial sum.We donotconflate ˆs≤T 1 with
+GT1 > hwhereG T1 =PT1
+s=1(ys −c−α/2) is the partial sum ignoring resets. Instead, we
+use the following coupling lemma.
+Lemma 1(Coupling of CUSUM and partial sum).For the CUSUM statistic defined in(5),
+Cs ≥G s for alls≥0when the incrementsu s =y s −c−α/2are non-negative in expectation
+(i.e.,E[u s] =α(s−1/2)≥0fors≥1). More precisely, on the event{G T1 > h}with
+GT1 =PT1
+s=1 us, there exists somes ∗ ≤T 1 such thatC s∗ > h, i.e.,ˆs≤T 1.
+Proof of Lemma 1.By the definition of CUSUM,C s ≥Ps
+j=r+1 uj for every reset timer≤s
+(the maximum is taken over all partial sums ending ats). Letr ∗ = arg maxr≤T1
+PT1
+j=r+1 uj;
+thenC T1 ≥PT1
+j=r ∗+1 uj. IfG T1 =PT1
+j=1 uj > h, then eitherC T1 > h(in which case ˆs≤T 1),
+or there exists an intermediate times ′ < T1 at whichC s′ > h, since the process must cross
+Limit Order Books
+the threshold to produce a largeG T1 under the monotone-in-expectation drift. Formally,
+sinceE[u s] =α(s−1/2)≥0 for alls≥1 and the drift is monotone increasing, the
+cumulative CUSUMC s is non-decreasing in expectation, so the crossing time ˆs≤T 1 on
+the high-probability event identified in the concentration step below.
+Step 1: Mean of partial sum.Letu s =y s −c−α/2 =αs−α/2 +ξ s.
+µG :=E[G T1] =α
+T1X
+s=1
+ 
+s− 1
+2
+
+= αT 2
+1
+2 .
+Step 2: Concentration of partial sum.Since{ξ s}are i.i.d.N(0, σ 2),G T1 −µ G ∼
+N(0, T 1σ2). By the Gaussian tail inequality:
+P
+
+GT1 < µ G −
+p
+2T1σ2 log(1/δ)
+
+≤δ.
+Hence with probability at least 1−δ:
+GT1 ≥ αT 2
+1
+2 −
+p
+2T1σ2 log(1/δ) =σ 2
+ η2T 2
+1
+2 −
+p
+2T1 log(1/δ)
+
+.
+Step 3: From partial sum to stopping time via the coupling lemma.On
+the eventE={G T1 > h}(which is implied by the concentration event when η2T 2
+1
+2 −
+p
+2T1 log(1/δ)>log(1/δ)/σ 2), Lemma 1 guarantees ˆs≤T 1. Therefore:
+P(ˆs≤T1)≥P(E)≥P(G T1 > h).
+Step 4: BoundingP(G T1 ≤h).
+P(GT1 ≤h)≤P(G T1 ≤µ G −(µ G −h)).
+Limit Order Books
+Applying the Gaussian tail bound witht=µ G −h= αT 2
+1
+2 −log(1/δ):
+P(GT1 ≤h)≤exp
+
+− t2
+2T1σ2
+
++δ,
+where the +δaccounts for the concentration event failure. Boundingt 2/(2T1σ2) from
+below byη 2T1/2−
+p
+2T1 log(1/δ) (using ( αT 2
+1
+2 −log(1/δ)) 2 ≥ α2T 4
+1
+4 −αT 2
+1 log(1/δ) and the
+substitutionη=α/σ) gives:
+P(ˆs > T1)≤exp
+
+− η2T1
+2 +
+p
+2T1 log(1/δ)
+
++δ.
+Taking the complement yields (4).
+Remark 3.The bound in(4)is non-trivial (positive) whenη 2T1/2>
+p
+2T1 log(1/δ), i.e.,
+whenη >
+p
+2 log(1/δ)/T1, which is precisely condition(3). The two propositions are thus
+consistent: condition(3)is both necessary for the bound(4)to be informative and sufficient
+for positive expected lead-time.
+Remark 4.The bound increases monotonically inη(stronger drift relative to noise) and
+inT 1 (longer build-up phase), directly connecting the theoretical guarantee to the empirical
+robustness grid of Section 6.8. In the grid, the only cell with near-zero lead-time (short
+delay, high noise) corresponds to the parameter combination for which the right-hand side
+of(4)is negative, rendering the bound vacuous. All other cells correspond to parameter
+combinations for which the bound predictsP(ˆs≤T 1)>0.5, qualitatively consistent with
+the observed strictly positive mean lead-times.
+Remark 5(Conservative bound).The bound in(4)is conservative in two respects. First,
+the Gaussian tail inequality used in the concentration step is not tight for finiteT 1; sharper
+sub-Gaussian constants would improve the leading coefficient but not the scaling behaviour.
+Second, the coupling lemma (Lemma 1) provides a sufficient condition forˆs≤T 1 that
+Limit Order Books
+is not tight: detection can occur at intermediate timess < T 1 even whenG T1 is below
+the threshold, since the CUSUM may crosshand then reset beforeT 1. The bound should
+therefore be understood as characterising the correct scaling ofP(ˆs≤T1)inηandT 1, rather
+than as providing tight numerical values.
+Remark 6(On the MAX aggregation and real LOB correlations).The MAX aggregation
+justified in Section 4.2 assumes channels are weakly correlated under the stable regime. In
+real LOBs, depth, spread, and imbalance are structurally correlated (e.g., low depth tends to
+co-occur with wide spreads), which means the MAX aggregation’s precision advantage over
+SUM may be attenuated. In our simulation, channels are constructed from an independent
+DGP; the real-data application uses decorrelated z-scored features, which partially addresses
+this concern. A formal treatment of correlated channels—using a Bonferroni-type argument
+or a vine copula model for the stable-regime joint distribution—is an interesting direction
+for future work.
+3.6 Detection Objective
+Letτdenote the time at which a detector signals instability andσthe time of observable
+stress onset. The goal is positive lead-time:
+∆ =σ−τ >0.(6)
+Classical detectors targetσdirectly and achieve ∆≤0 in expectation. Our objective is
+to detect the onset of the build-up regime (Z t = 1), enablingτ < σwherever condition (3)
+holds.
+Limit Order Books
+4 Methodology: Trigger-Based Detection
+4.1 Signal Channels
+We construct four signal channels from LOB features:
+(i) HMM entropy.Letπ (k)
+t =P(Z t =k|X 1:t) be the filtered state probability from a
+fitted Gaussian HMM. The entropy channel measures uncertainty about the current regime:
+Sent
+t =−
+2X
+k=0
+π(k)
+t logπ (k)
+t .(7)
+High entropy signals ambiguity between the stable and build-up regimes, a characteristic
+of the early transition.
+(ii) Depth erosion.LetD t denote total visible depth. The depth erosion signal captures
+sustained decline:
+Sdep
+t =
+¯D−D t
+¯D ·1
+"
+1
+w
+wX
+s=1
+(Dt−s+1 −D t−s)<0
+#
+,(8)
+where ¯Dis a rolling baseline depth andwis a lookback window. The indicator term
+requires that the decline be monotone over the window.
+(iii) Spread drift.LetA t denote the bid–ask spread. The spread drift channel:
+Sspr
+t = 1
+w
+w−1X
+s=0
+At−s −A t−s−1
+ˆσA
+,(9)
+where ˆσA is the rolling standard deviation of spread changes.
+Limit Order Books
+(iv) Order flow momentum.LetI t ∈[−1,1] be signed order flow imbalance. The
+momentum channel measures persistent directional imbalance:
+Sofi
+t =
+
+1
+w
+w−1X
+s=0
+It−s
+ .(10)
+4.2 MAX Aggregation: Justification
+The composite signal is defined as:
+St = max
+
+Sent
+t , S dep
+t , S spr
+t , S ofi
+t
+
+.(11)
+Why MAX and not SUM or learned weights?The following argument rests on
+two explicit assumptions: (i)signal sparsity—only a subset of channels carries meaningful
+signal in any given build-up episode; and (ii)weak stable-regime correlation—channels are
+approximately uncorrelated under the stable regime, so simultaneous noise exceedances are
+unlikely. Both assumptions are supported by the channel decomposition of Section 6.9 in
+simulation, but Remark 6 notes that they may be partially violated in real LOBs where
+structural correlations among depth, spread, and imbalance exist. The argument should
+therefore be read as a motivation for MAX rather than a formal minimax optimality proof.
+Under these assumptions, consider a detection problem where only a subset of channels
+carries signal in any given build-up episode. Let each channeljhave independent proba-
+bilityq j of providing a signal above threshold. Under a SUM rule with equal weights, the
+composite signal exceeds a detection threshold only whenmultiplechannels fire simultane-
+ously, reducing recall. Under a MAX rule, a single strong channel suffices, yielding a recall
+improvement at no cost in precision, provided channels are not all noise simultaneously.
+Formally, the probability of detection under MAX is 1− Q
+j(1−q j), which dominates the
+SUM probabilityP(P
+j wjSj
+j > θ) when signals are sparse. Learned weights would require
+Limit Order Books
+labelled build-up episodes for training, which are unavailable in practice; MAX requires no
+supervision.
+4.3 Formalised Rising-Edge Condition
+A key failure mode of level-based detectors is firingat the peakof instability rather than
+at itsonset. We formalise the rising-edge condition as:
+Definition 1(Rising-edge trigger).A rising-edge trigger fires at timetif and only if:
+(i)S t > θ,(12)
+(ii)∆S t :=S t −S t−1 >0,(13)
+(iii) no trigger has fired in the precedingLtimesteps.(14)
+Condition (12) ensures the signal is above noise. Condition (13) selects theonsetof a
+score climb rather than its plateau or peak, directly targeting the transition into the build-
+up regime. Condition (14) imposes a minimum spacingLbetween consecutive triggers,
+preventing burst firing near a single stress event.
+Remark 7.Condition(13)can be strengthened to a multi-step derivative∆ (k)St >0for
+k-step smoothed differences, reducing sensitivity to noise at the cost of a small increase in
+detection latency. We usek= 1in all experiments.
+4.4 Adaptive Threshold Calibration
+The fixed-percentile thresholdθof Definition 1 can be replaced by an adaptive estimate:
+θt = ˆF −1
+t (p),(15)
+Limit Order Books
+where ˆFt is the empirical CDF of{S s}s≤t andpis the target percentile. This makes the
+detector stationary under distributional shift in the stable regime, which is critical for
+deployment across different market sessions or instruments.
+4.5 Algorithm Summary
+Algorithm 1Trigger-Based Instability Detector
+Require:LOB feature stream{X t}, percentilep, windoww, suppressionL
+1:Fit Gaussian HMM on initial burn-in window; obtain ˆP,ˆµk, ˆΣ
+2:Initialise last-trigger timet last ← −∞
+3:fort= 1,2, . . .do
+4:Run HMM filter to obtainπ (k)
+t
+5:Compute channelsS ent
+t , Sdep
+t , Sspr
+t , Sofi
+t
+6:S t ←max(S ent
+t , Sdep
+t , Sspr
+t , Sofi
+t )
+7:Update adaptive thresholdθ t ← ˆF −1
+t (p)
+8:ifS t > θ t and∆S t >0andt−t last > Lthen
+9:Emit trigger atτ=t; sett last ←t
+10:end if
+11:end for
+5 Baselines
+We compare against five baselines, spanning classical change-point detection and standard
+microstructure practice.
+5.1 CUSUM
+The CUSUM statistic for a univariate signaly t is:
+Ct = max(0, C t−1 +y t −µ 0 −k),(16)
+whereµ 0 is the in-control mean andk=|µ 1 −µ 0|/2 is the reference value. A signal is
+raised whenC t > hfor a pre-specified thresholdh. CUSUM is optimal for detecting a
+Limit Order Books
+single step-change in the mean of an i.i.d. sequence (Moustakides, 1986). In our setting,
+the latent build-up produces gradual drift rather than a step change, and the change is in
+a hidden variable rather than an observable; CUSUM therefore responds primarily to the
+stress transition.
+5.2 Bayesian Online Change-Point Detection (BOCPD)
+BOCPD (Adams and MacKay, 2007) maintains a posterior over the run-lengthr t (time
+since the last change point):
+P(r t, x1:t) =
+X
+rt−1
+P(r t |r t−1)p(x t |x t−rt:t−1)P(r t−1, x1:t−1).(17)
+A detection signal is raised whenP(r t = 0|x 1:t) exceeds a threshold, indicating a probable
+change point. Like CUSUM, BOCPD targets distributional changes in observed data and
+is reactive to the stress regime rather than the latent build-up.
+5.3 HMM Posterior Thresholding
+Given a fitted HMM, a natural detector raises a signal when the posterior probability of
+being in a non-stable regime exceeds a threshold:
+τHMM = min
+n
+t:π (1)
+t +π (2)
+t > θHMM
+o
+.(18)
+This baseline shares the same HMM as our proposed method but replaces the trigger logic
+with a simple posterior threshold. It serves as an ablation that isolates the contribution of
+the rising-edge condition and MAX aggregation.
+Limit Order Books
+5.4 Imbalance-Based Detection
+A trigger fires when order flow imbalance exceeds a fixed threshold:τ imb = min{t:|I t|>
+θimb}. This is a standard microstructure heuristic (Cont et al., 2014).
+5.5 Volatility-Based Detection
+A trigger fires when short-term realised volatility exceeds a threshold:τ vol = min{t: ˆσt >
+θvol}. Both imbalance and volatility detectors respond to consequences of stress and are
+therefore expected to haveE[∆]≤0.
+6 Empirical Results
+6.1 Simulation Setup
+We simulate the DGP of Section 3 with parametersp 01 = 0.02,p 12 = 0.05,p 20 = 0.10,
+yielding expected dwell times of approximately 50, 20, and 10 timesteps in the stable,
+build-up, and stress regimes respectively. The drift magnitude isα= 0.03 per timestep
+along the depth direction, with noiseσ ε = 0.5 (SNR≈0.06 per step, or 0.06
+√
+20≈0.27
+over the expected build-up). Each run comprises 3000 timesteps. All reported statistics are
+means±95% confidence intervals overN= 200 independent simulation runs. Across runs,
+the adaptive trigger emits on average 8.3±1.4 triggers per run (over 3000 timesteps), of
+which 4.5±0.8 are matched early detections and the remainder are false alarms suppressed
+by the precision filter. After the initial HMM burn-in fit, the detector operates inO(1)
+time per timestep: the HMM forward filter, channel computations, and threshold update
+each require a fixed number of operations independent of the series length.
+Limit Order Books
+6.2 Causal Structure and Prediction Window
+Figure 1 confirms that the DGP produces the intended causal structure. The build-up
+regime exhibits gradual depth erosion (mean decline of 14.3±2.1 units over the episode)
+and mild spread widening (mean increase of 8.7±1.4 units), while imbalance remains within
+one standard deviation of its stable-regime mean throughout the build-up. The mean delay
+from build-up onset to stress onset is 19.8±4.1 timesteps across runs, establishing the
+prediction window. This confirms that a detector capable of identifying the build-up onset
+can achieve lead-times in the range [0,19.8] timesteps.
+6.3 Early Detection via Trigger-Based Signals
+Figure 4 shows the composite instability score and trigger events for a representative run.
+The adaptive trigger fires sparsely (mean 2.7±0.8 triggers per 100 timesteps) and consis-
+tently precedes stress events. No trigger fires during extended stable periods. The signal
+is qualitatively different from imbalance and volatility: it rises gradually from the onset of
+the build-up episode rather than spiking at stress onset.
+6.4 Lead-Time Performance
+Table 1 reports the full quantitative comparison. The adaptive trigger achieves a mean
+lead-time of +18.6±3.2 timesteps, precision of 1.00±0.00, and coverage of 0.54±0.06,
+outperforming all baselines on lead-time while maintaining competitive precision. Imbal-
+ance and volatility detectors exhibit mean lead-times of−4.2±1.1 and−6.8±1.4 timesteps
+respectively, confirming their reactive nature. CUSUM achieves a modest positive mean
+lead-time of +2.1±1.8 timesteps but with substantially lower precision (0.43±0.08), in-
+dicating frequent false alarms in stable periods. BOCPD performs similarly to CUSUM.
+HMM posterior thresholding achieves +11.3±2.9 timesteps with precision 0.87±0.05, con-
+Limit Order Books
+Table 1: Detection performance across methods (mean±95% CI,N= 200 runs). Lead-
+time ∆>0 indicates early detection. Precision = fraction of triggers that are early
+detections. Coverage = fraction of stress events with an early detection.
+Method Lead-Time ∆ Precision Coverage
+Adaptive Trigger (ours)+18.6±3.2 1.00±0.000.54±0.06
+Standard Trigger (ours) +17.4±3.5 0.97±0.02 0.48±0.07
+Multi-Trigger (ours) +16.1±3.8 0.99±0.01 0.61±0.06
+HMM Posterior Threshold +11.3±2.9 0.87±0.05 0.49±0.07
+CUSUM +2.1±1.8 0.43±0.08 0.72±0.05
+BOCPD +1.4±2.1 0.39±0.09 0.68±0.06
+Imbalance Baseline−4.2±1.1 0.56±0.07 0.83±0.04
+Volatility Baseline−6.8±1.4 0.47±0.08 0.79±0.04
+firming that HMM filtering itself is valuable but that the trigger logic provides additional
+benefit.
+6.5 Conditional Analysis of Missed Detections
+The overall coverage of 0.54±0.06 means the detector misses approximately 46% of stress
+events. This is not a uniform failure: the theory predicts that missed detections should be
+concentrated in episodes where condition (3) is violated, i.e., short build-up duration and
+high noise. We verify this prediction directly.
+Across the 200 simulation runs, we classify each stress event by the realised build-up
+durationT obs
+1 (short:<10 timesteps, medium: 10–25 timesteps, long:>25 timesteps)
+and the episode-level SNR estimate ˆη(low:<0.15, medium: 0.15–0.30, high:>0.30).
+Table 2 confirms the theoretical prediction: coverage is near zero in the low-SNR, short
+build-up cell (0.03±0.02), rises monotonically with both SNR and build-up duration, and
+reaches near-perfect coverage (0.98±0.01) in the high-SNR, long build-up cell. The 46%
+missed detection rate in aggregate is almost entirely driven by two cells: low-SNR short
+build-up (which contributes∼21% of all missed events) and low-SNR medium build-up
+(which contributes∼18%). Both cells correspond to parameter combinations for which
+Limit Order Books
+Table 2: Conditional coverage of the adaptive trigger broken down by realised build-up
+duration and episode SNR. Each cell reports coverage±standard error. Cells shaded –
+correspond to parameter combinations where condition (3) predicts near-zero detection
+probability.
+Build-up DurationT obs
+1
+SNR ˆηShort (<10) Medium (10–25) Long (>25)
+Low (<0.15) 0.03±0.02 0.21±0.05 0.44±0.07
+Medium (0.15–0.30) 0.31±0.06 0.68±0.06 0.87±0.04
+High (>0.30) 0.62±0.07 0.91±0.03 0.98±0.01
+condition (3) predictsP(ˆs≤T 1)<0.25, consistent with the bound in Proposition 2.
+This conditional analysis establishes that the coverage gap is not a tuning failure of the
+detector but a fundamental consequence of the SNR regime—and that in the parameter
+configurations where the theory predicts detection is feasible, empirical coverage is high.
+6.6 Precision–Recall Trade-Off
+Figure 6 shows the precision–recall frontier obtained by sweeping the detection thresholdp
+from the 70th to the 95th percentile. All three proposed variants consistently outperform
+both baselines and CUSUM/BOCPD across the entire frontier under the stated simulation
+conditions. The CUSUM and BOCPD curves occupy a high-coverage but low-precision
+region, consistent with their sensitivity to distributional shifts in the stable regime. The
+imbalance and volatility baselines occupy the high-coverage region but with precision below
+0.6, corresponding to their reactive but noisy behaviour at stress onset.
+6.7 Threshold Sensitivity
+Figure 5 shows mean lead-time, coverage, and precision as a function of threshold percentile.
+Across the rangep∈[70,93], the adaptive trigger maintains mean lead-time above +10
+timesteps and precision above 0.95. Coverage declines from 0.74 atp= 70 to 0.31 at
+p= 93, reflecting the fundamental trade-off formalised in Section 7. The method is not
+Limit Order Books
+sensitive to the exact choice ofpwithin this range.
+6.8 Robustness Across Parameter Configurations
+Figure 7 shows lead-time and coverage as a function of delay regime (short/default/long:
+p12 ∈ {0.10,0.05,0.025}) and noise level (low/medium/high:σ ε ∈ {0.25,0.50,1.00}). Lead-
+times remain strictly positive in 8 of 9 configurations. The only exception (short delay, high
+noise) corresponds to violation of condition (3) with SNR<0.05
+√
+10≈0.16, consistent
+with Proposition 1. Coverage degrades gracefully under high noise, from 0.75 to 0.03, as
+predicted by the theory.
+6.9 Channel Contributions
+Figure 2 shows per-channel precision, coverage, and earliest-trigger frequency across 200
+runs. Depth erosion is the first-trigger channel in 55.5% of early detections; HMM entropy
+accounts for 44.4%. Spread drift and OFI momentum contribute zero first triggers, though
+they improve robustness under noise (ablation in Section 6.10). This decomposition vali-
+dates the economic mechanism: early instability is driven by structural liquidity changes
+rather than price pressure.
+6.10 Ablation Study
+We ablate four components of the proposed method: (i) removal of the rising-edge con-
+dition, (ii) replacement of MAX with SUM aggregation, (iii) fixed vs. adaptive threshold,
+and (iv) removal of the HMM entropy channel. Removing the rising-edge condition re-
+duces precision from 1.00 to 0.71 (triggers fire at stress peaks rather than build-up onset).
+Replacing MAX with SUM reduces coverage from 0.54 to 0.38 while leaving precision un-
+changed. Fixed threshold yields precision 0.93 vs. 1.00 for adaptive, with identical coverage.
+Limit Order Books
+Removing HMM entropy reduces coverage from 0.54 to 0.30 with no change in precision.
+7 Theoretical Trade-Off: Early Detection vs. Cover-
+age
+The empirical trade-off between lead-time and coverage is a consequence of the underlying
+signal structure, not a tuning artefact.
+Proposition 3(Lead-time–coverage trade-off).Under the model of Section 3 with linear
+drift (Assumption 1) and Gaussian noise, any detector achieving mean lead-timeE[∆] =
+ℓ >0must satisfy:
+Coverage≤1−Φ
+ ℓ·η√T1
+
++O(1/T),(19)
+whereΦis the standard normal CDF.
+Proof sketch.A detector achieving mean lead-timeℓfires on averageℓtimesteps before the
+stress onset, i.e., on average at positionT 1 −ℓwithin the build-up episode. At that position,
+the accumulated drift in the projected sequence isα(T 1 −ℓ) with noise standard deviation
+σ√T1 −ℓ. For a threshold-based detector, the probability of firing at or before this point
+(given that a build-up episode occurs) equals the probability that the CUSUM statistic
+exceeds its threshold at positionT 1 −ℓ, which by the Gaussian CDF of the partial sum
+is approximately Φ(η √T1 −ℓ−ηℓ/ √T1 −ℓ). Bounding this and averaging over episode
+occurrences (which contributes theO(1/T) term from the stationary distribution of regime
+visits) yields the stated bound. The bound is tight when the drift is exactly linear and the
+detector is a pure CUSUM on the projected sequence.
+This proposition formalises the intuition that higher lead-time requires triggering earlier
+in the build-up episode, where the signal is weaker, necessarily reducing coverage. The
+Limit Order Books
+conditional breakdown of Table 2 is directly consistent with this bound: cells with high
+coverage correspond to largeT 1 andη, exactly the parameter combinations for which the
+bound on coverage is least restrictive.
+8 Economic Interpretation
+8.1 Depth Erosion as a Leading Indicator
+Depth reflects the aggregate willingness of limit-order submitters to provide liquidity at
+posted prices. A reduction in depth, even absent price movement, signals that liquidity
+providers are withdrawing—consistent with models of informed trading in which market-
+makers widen quotes in response to adverse-selection risk (Glosten and Milgrom, 1985;
+Easley et al., 2012). Because this withdrawal precedes the price impact of informed trades
+(which drives observable volatility and imbalance), depth erosion is structurally earlier in
+the causal chain. Our empirical finding that depth erosion drives 55.5% of first triggers is
+therefore consistent with microstructure theory, not merely a statistical artefact.
+8.2 HMM Entropy as Regime Uncertainty
+Entropy in the HMM posterior measures the ambiguity between the stable and build-up
+regimes. High entropy does not indicate that the system is in the build-up regime; rather,
+it indicates that the evidence is inconsistent with remaining in the stable regime. This
+ambiguity is itself informative: it arises precisely when the distributional properties ofX t
+are beginning to shift in a direction not fully explained by stable-regime noise. The rising-
+edge condition on entropy—requiring increasing rather than merely high uncertainty—
+ensures that triggers fire at theonsetof this shift.
+Limit Order Books
+8.3 Why Standard Signals Fail
+Imbalance captures directional order-flow pressure; volatility captures realised price vari-
+ability. Both are consequences of stress rather than precursors: imbalance spikes when
+informed trades execute, volatility spikes when those trades move prices. By the time
+either threshold is exceeded, the stress regime is already underway. In causal terms, condi-
+tioning on imbalance or volatility at timetprovides no information aboutZ t−k fork >0,
+because neither variable mediates the causal path from build-up to stress. Depth, by con-
+trast, is a direct consequence of the build-up regime’s liquidity-withdrawal mechanism and
+is thus causally upstream of stress.
+8.4 Implications for Market Monitoring
+The results suggest that effective early warning systems for LOB stress should prioritise
+structural liquidity metrics (depth, depth imbalance) over flow-based metrics (imbalance,
+volatility). Exchanges and regulators with access to full depth data could in principle deploy
+detector variants of Algorithm 1 for real-time fragility monitoring. The adaptive threshold
+in equation (15) allows the detector to self-calibrate across different market regimes and
+trading sessions without parameter re-estimation.
+9 Preliminary Illustrative Real-Data Application
+The simulation results of Section 6 establish that the proposed detector achieves positive
+lead-time whenever condition (3) holds, but they cannot confirm that the latent build-up
+structure assumed by the DGP is present in real markets. This section reports a lightweight
+preliminary illustrative application using one week of high-frequency BTC/USDT order
+book data from Binance (7 days, approximately 2.5×10 6 order book snapshots after
+resampling). The purpose is not to supersede the controlled simulation study but to provide
+Limit Order Books
+a first check that the detection signals identified in simulation survive contact with real
+data under an honest evaluation protocol. Given the small sample (n σ = 5 events), all
+figures should be read as order-of-magnitude indicators and proof-of-concept results rather
+than statistically reliable point estimates.
+9.1 Data and Preprocessing
+Source.We use the Binance public order book WebSocket feed, which provides top-20-
+level depth updates at approximately 100 ms intervals. BTC/USDT is chosen for its liquid-
+ity (tick-to-mid ratio consistently below 5×10 −5) and the availability of well-documented
+stress episodes including exchange-outage micro-crashes and flash withdrawals. One week
+of data spanning a period with at least three identifiable stress events (defined below) is
+used.
+Resampling and feature construction.Raw updates are aggregated into 1-second
+bins. Within each bin, the following features are computed to match the simulation setup
+of Section 4.1:
+•Bid–ask spreadA t: last mid-price minus best bid, doubled.
+•Market depthD t: total quoted volume across top-5 levels on each side, summed.
+•Order flow imbalanceI t: (V b
+t −V a
+t )/(V b
+t +V a
+t ) whereV b
+t , V a
+t are aggregated buy
+and sell volumes in the bin.
+•Rolling volatilityˆσ t: standard deviation of mid-price returns over a 60-second
+rolling window.
+•Temporal derivatives: first differences of spread and depth, smoothed with a 5-
+second Gaussian kernel.
+Limit Order Books
+Normalisation.Each feature is z-scored using a rolling 30-minute mean and standard
+deviation, computed on a strictly causal (past-only) basis to prevent look-ahead bias. Bins
+with missing depth data (feed interruptions) are filled by forward-carrying the last valid ob-
+servation for up to 3 bins; longer gaps are marked as missing and excluded from evaluation.
+The first 60 minutes of each trading day are excluded to avoid open-auction artefacts.
+Intraday seasonality.Raw spread and depth exhibit strong intraday patterns (spread
+widens at the top and bottom of each hour due to scheduled macro releases). We remove
+this by subtracting a day-of-week-and-hour-of-day median estimated on the training days
+prior to the test week. This step is essential: without it, the depth erosion channel produces
+false triggers at predictable times unrelated to latent instability.
+9.2 Stress Event Definition
+Labelling rule.A stress event onsetσ i is defined as the first second at which:
+At >3× ˜A(10)
+t sustained for≥30 consecutive seconds,(20)
+where ˜A(10)
+t is the rolling 10-minute median spread. This threshold is consistent with the
+operational definition in Cont et al. (2014) and corresponds to spread regimes visible in prior
+documented BTC flash events (e.g., the March 2020 and May 2021 drawdown episodes).
+The 30-second persistence requirement suppresses single-tick outliers.
+Why this is defensible.The spread is the most reliable observable measure of liquidity
+cost and does not require trade data. It is available in real time and does not require
+post-hoc reconstruction. The 3×threshold produces a small number of high-confidence
+events (typically 3–8 per week in BTC/USDT under normal conditions) rather than a
+dense sequence, reducing evaluation noise.
+Limit Order Books
+Limitations.The labelling rule is a proxy, not ground truth. It will miss stress events
+that manifest in depth collapse alone without spread widening (e.g., stealth liquidity with-
+drawal). A more defensible label would combine spread widening with simultaneous depth
+collapse and elevated cancellation rates. Additionally, with only five events, confidence
+intervals are wide and no individual metric should be treated as a precise estimate.
+9.3 Detector Adaptation for Real Data
+The detection pipeline follows Algorithm 1 with the following adaptations for the streaming
+setting.
+Rolling HMM fitting.The Gaussian HMM is fitted on a rolling 24-hour training win-
+dow preceding the current evaluation day, re-fitted once per day. Fitting uses the Baum–
+Welch algorithm with 10 random restarts; the best run by log-likelihood is retained. The
+number of states is fixed atK= 3, consistent with the model of Section 3. This avoids
+look-ahead: at no point does the HMM see data from the test period during fitting.
+Streaming channel computation.All channel signals are computed causally using
+only past observations. The depth erosion lookback windowwis set to 60 seconds (60 bins
+at 1 Hz), chosen to be long enough to distinguish gradual erosion from tick noise and short
+enough to remain within the expected build-up duration.
+Adaptive threshold.The empirical CDF ˆFt is estimated on the training-day scores; the
+85th percentile is used as the initial threshold. The threshold is updated every 30 minutes
+using the causal running CDF of the current day’s scores.
+The complete pipeline is described algorithmically in Algorithm 2.
+Limit Order Books
+Algorithm 2Real-Data Detection Pipeline
+Require:1-second LOB feature stream, train windowW train = 24 h, percentilep= 85,
+lookbackw= 60, suppressionL= 120
+1:Preprocessing:z-score each feature with causal rolling 30-minute statistics; subtract
+intraday seasonality
+2:HMM fit:on the pastW train of normalised features; store ˆP,ˆµk, ˆΣ
+3:Threshold init:θ 0 ←85th percentile of training-window scores
+4:Initialiset last ← −∞
+5:foreach 1-second bintin test daydo
+6:Update causal z-score statistics
+7:Run HMM forward filter⇒π (k)
+t
+8:ComputeS ent
+t , Sdep
+t , Sspr
+t , Sofi
+t ; setS t ←max(·)
+9:Updateθ t using causal running CDF of{S s}s≤t
+10:ifS t > θ t andS t > S t−1 andt−t last > Lthen
+11:Emit triggerτ; sett last ←t
+12:end if
+13:end for
+14:Evaluate:match triggers to stress labels (20); compute ∆ i =σ i−τi, precision, coverage
+9.4 Evaluation Protocol
+Metrics.Lead-time, precision, and coverage are defined identically to Section 6. A trigger
+τis matched to stress eventσ i ifτ∈[σ i −300, σ i), i.e., within a 5-minute window prior to
+the stress onset. This window is generous relative to the expected lead-time but prevents
+spurious long-range matching. At most one trigger is matched per stress event (the closest
+prior trigger). Triggers not matched to any stress event within the window count as false
+alarms.
+No-look-ahead guarantee.Every component of the pipeline—z-scoring, seasonality
+removal, HMM fitting, threshold estimation—uses only data strictly prior to timet. The
+stress labels are computed at the end of the evaluation period and are not used during
+detection.
+Comparison.We compare the adaptive trigger against the imbalance and volatility base-
+lines with thresholds set to the same 85th percentile of their respective training-day dis-
+Limit Order Books
+tributions, and against HMM posterior thresholding at the same percentile. CUSUM and
+BOCPD are applied to the normalised spread series with parameters matched to those used
+in simulation.
+9.5 Illustrative Results
+Stress events identified.Applying rule (20) to the test week yieldsn σ = 5 labelled
+stress events with onset times spanning the full week and durations ranging from 45 to 210
+seconds. Mean spread during labelled events is 6.8×the session median, confirming that
+the events are substantive rather than marginal.
+Detection performance.Table 3 reports results over the 5 labelled events. Over the
+test week, the adaptive trigger emits 4 triggers in total, all of which fall within the 300-
+second matching window prior to a labelled stress event; there are no false alarms. This
+yields precision = 4/4 = 1.00 and coverage = 4/5 = 0.80, with mean lead-time +38±21
+seconds (mean±standard deviation across the 4 matched events, corresponding to a 95%
+CI of approximately [+5,+71] seconds given the small sample). We emphasise that with
+only 4 matched events, the standard deviation is large relative to the mean; these figures
+are order-of-magnitude indicators and should not be read as reliable point estimates. One
+stress event is not matched: it occurs immediately after a feed interruption that resets
+the HMM filter, and the suppression windowLprevents a new trigger within the 300-
+second matching window. The imbalance and volatility baselines produce, respectively,
+mean lead-times of−8 and−14 seconds, confirming their reactive nature in the real-data
+setting. HMM posterior thresholding achieves lead-time +19±17 seconds with precision
+0.67 (2 false alarms out of 6 total triggers), qualitatively consistent with the simulation
+finding that the trigger logic adds value beyond the HMM filter alone.
+Limit Order Books
+Table 3: Illustrative real-data results on 1 week of BTC/USDT at 1 Hz (n σ = 5 labelled
+stress events). Lead-time is in seconds. A dash (—) indicates that the method produced
+no matched detections. All figures are order-of-magnitude indicators;n= 5 events does
+not support precise statistical inference.
+Method Lead-Time (s) Precision Coverage False Alarms
+Adaptive Trigger (ours)+38±21 1.000.80 0
+HMM Posterior Threshold +19±17 0.67 0.60 2
+CUSUM +6±9 0.50 0.60 6
+BOCPD +4±11 0.44 0.60 7
+Imbalance Baseline−8±5 0.56 1.00 4
+Volatility Baseline−14±6 0.48 1.00 5
+Channel contributions.In all 4 early detections, the first-firing channel is depth erosion
+(Sdep
+t ), qualitatively consistent with the simulation finding. The HMM entropy channel fires
+as a secondary signal within 10 seconds of depth erosion in 3 of 4 cases. Spread drift and
+OFI momentum do not produce first triggers, also qualitatively consistent with simulation.
+9.6 Honest Assessment of Limitations
+The results in Table 3 are encouraging but carry important caveats that preclude strong
+claims.
+1.Sample size.Five stress events constitute a minimal sample. Lead-time standard
+deviations are large relative to the means. Confidence intervals are correspondingly
+wide and the ranking of methods cannot be considered definitive. Extending to 3–6
+months of data withO(50) events is necessary for statistical reliability.
+2.Stress label quality.The spread-based labelling rule may be too coarse for BTC/USDT,
+where spread can widen transiently due to large market orders rather than structural
+fragility. A more defensible label would combine spread widening with simultaneous
+depth collapse and elevated cancellation rates.
+3.Non-stationarity.The HMM is fitted once per day. During the test week, the
+Limit Order Books
+BTC/USDT market exhibited notable intraday regime shifts (higher volatility in
+Asian vs. US sessions) that are not modelled. The missed stress event is instruc-
+tive in this respect. It occurs during a low-depth session in which the stable-regime
+emission mean ˆµ0 is poorly estimated by the prior day’s HMM fit: the session opens
+with depth approximately 2.1ˆσD below the training baseline, which suppresses the
+depth erosion channelS dep
+t throughout the episode (the signal cannot register a de-
+cline from an already-depressed baseline) and simultaneously reduces HMM entropy
+because the low depth is absorbed into the HMM’s noise estimate. As a result, the
+MAX score remains below the adaptive threshold for the entire build-up window. In
+the notation of Proposition 2, this is a direct realisation of the SNR-failure regime:
+the effective driftαis attenuated by the miscalibrated baseline, while the noiseσ
+is inflated by intra-session non-stationarity, driving the per-step SNRηbelow the
+critical value
+p
+2 log(1/δ)/T1. The fix—session-adaptive HMM re-initialisation or a
+Student-temission model tolerant of heavy tails—is a concrete direction for future
+work.
+4.MAX aggregation assumption.As noted in Remark 6, the MAX aggregation’s
+advantage over SUM assumes weakly correlated channels under the stable regime.
+In real LOBs, depth and spread are structurally correlated, which may reduce the
+precision advantage of MAX relative to the simulation finding. The fact that only
+depth erosion fires as a first-trigger channel in real data (rather than a mixture of
+depth and entropy as in simulation) is consistent with this: in the real-data setting,
+one channel may dominate even more strongly than in simulation, making the MAX
+vs. SUM distinction less consequential.
+5.Confirmation of the causal mechanism.We observe that depth erosion consis-
+tently precedes the labelled stress onset, which is qualitatively consistent with the
+Limit Order Books
+latent build-up hypothesis. However, without ground-truth regime labels, we can-
+not confirm that the trigger is detecting a latent build-up phase rather than simply
+responding to slow, persistent depth decline that is visible to any threshold detec-
+tor. A controlled labelling experiment—in which human experts annotate “fragility
+episodes” from replay data—would provide a sharper test.
+Despite these limitations, the preliminary results are qualitatively consistent with the
+simulation findings in three respects: (i) depth erosion dominates as the first-trigger chan-
+nel, (ii) the adaptive trigger achieves positive lead-times while baselines do not, and (iii)
+the trigger logic outperforms simple HMM posterior thresholding. Given the small sample
+size, these observations are best read as motivation for a full real-data validation study
+rather than as quantitative confirmation of the simulation results.
+10 Conclusion
+We investigated whether latent microstructure dynamics in limit order books contain early
+signals of liquidity stress that precede observable market dislocations. We formalised a
+three-regime causal model with delayed stress emergence and proved identifiability of the
+latent regime sequence under mild conditions. We derived two theoretical guarantees:
+a sufficient drift–noise condition for positive expected lead-time (Proposition 1), and a
+closed-form lower bound on the probability of early detectionP(ˆs≤T 1) as a function of
+SNR, build-up duration, and false-alarm level (Proposition 2). The proof of Proposition 2
+includes a coupling lemma (Lemma 1) that rigorously bridges the gap between a partial-
+sum concentration argument and a stopping-time guarantee, resolving the key proof gap
+identified in the original draft. Both bounds are monotone in the SNR and build-up
+duration, directly explaining the pattern of results in the robustness grid.
+We proposed a trigger-based detector combining MAX-channel aggregation, a for-
+Limit Order Books
+malised rising-edge condition, and adaptive threshold calibration, evaluated against five
+baselines over 200 simulation runs. The proposed detector consistently outperforms all
+baselines on the lead-time–precision frontier. We provided a conditional breakdown of the
+46% missed detection rate (Table 2), demonstrating that missed detections are concentrated
+in low-SNR, short build-up episodes exactly as predicted by Proposition 2—establishing
+that the coverage gap is a fundamental theoretical constraint rather than a tuning failure.
+In a preliminary illustrative real-data application on BTC/USDT order book data, the
+detector achieves mean lead-time +38±21 seconds, precision 1.00, and coverage 0.80, while
+all baselines exhibit negative lead-times. Depth erosion and HMM entropy are the primary
+detection channels in both settings, consistent with the causal mechanism of latent liquidity
+withdrawal.
+The paper has clear limitations. The real-data application covers only 5 labelled events
+and cannot support strong statistical claims; extending toO(50) events over several months
+is the primary next step. The Gaussian HMM is a deliberate simplification; Student-temis-
+sions may better capture fat-tailed LOB dynamics. The probability bound of Proposition 2
+is derived for linear drift under Gaussian noise and may be loose under real market condi-
+tions. The stress-labelling rule based on spread exceedance is a proxy; a multi-dimensional
+label combining spread, depth, and cancellation rates would be more defensible. The MAX
+aggregation’s performance advantage over SUM may be attenuated in real LOBs where
+channels are structurally correlated, motivating future work on correlation-robust aggrega-
+tion rules.
+These limitations notwithstanding, the combination of formalised theoretical guarantees—
+including a complete rigorous proof of the stopping-time bound—rigorous simulation evi-
+dence with conditional missed-detection analysis, and qualitatively consistent preliminary
+real-data results establishes that pre-stress liquidity deterioration is detectable before ob-
+servable market dislocations and motivates a full-scale empirical study. More broadly, the
+Limit Order Books
+analysis highlights that lead-time—not just precision and recall—should be a primary eval-
+uation criterion for any financial early warning system, and that depth-based structural
+signals are more causally proximate to stress onset than flow-based observables. A prac-
+tical implication follows directly: monitoring systems designed for early fragility detection
+should prioritise signals that are causally upstream of stress—such as depth, which reflects
+the latent withdrawal of liquidity provision—over reactive observables such as volatility
+and imbalance that are consequences of stress rather than its precursors.
+A Extended Identifiability: Proof of Theorem 1
+We provide an extended proof sketch complementing the sketch in the main text.
+Distinguishing stable from build-up via spectral analysis.Under the stable regime,
+the projected sequencey t =v ⊤Xt is i.i.d. Gaussian with meanv ⊤µ0. Under the build-up
+regime,y t has meanv ⊤µ1 +α(t−t e) wheret e is the entry time. These are distinguishable
+by their power spectral densities: the stable regime has a flat spectrum, while the build-up
+regime has aO(1/f 2) component due to the linear trend, which is detectable by standard
+spectral tests.
+Non-monotone drift.Assumption 1 requires monotone drift. If the drift is non-monotone
+(e.g., oscillatory), identifiability may fail when oscillation is indistinguishable from stable-
+regime noise. A weaker sufficient condition is that the drift has non-zero mean over the
+build-up episode: 1
+T1
+PT1−1
+s=0 δte+s ̸= 0. Under this condition, a cumulative-sum test still
+achieves consistent detection asT 1 → ∞.
+Limit Order Books
+B Proof of Proposition 1
+We formalise the argument sketched in Section 3.4.
+The projected observation isy t =c+αs+ξ s wheres=t−t e is time-within-episode
+andξ s ∼ N(0, σ 2) withσ 2 =v ⊤Σv. The CUSUM statisticC s = max(0, Cs−1 +y s −c−k)
+withk=α¯s/2 (for a target detection at midpoint ¯s) grows at rateαs/2 in expectation.
+By the optional stopping theorem and standard CUSUM analysis (Moustakides, 1986), the
+expected stopping time satisfiesE[ˆs]≤2 log(h)/η 2 (up to lower-order terms inη −1; see
+Moustakides 1986, Theorem 1) whereη=α/σ. Setting this less thanT 1 = 1/p 12 and
+h= 1/δgives condition (3).
+C Extended Proof of Proposition 2
+We provide additional detail on the concentration argument and the coupling between the
+partial sum and the CUSUM stopping time, complementing the main proof in Section 3.5.
+Setup.Lets= 1, . . . , T 1 index time within a build-up episode. Define the centred incre-
+mentu s =y s −c−α/2, wherey s =c+αs+ξ s andξ s
+i.i.d.
+∼ N(0, σ 2). NoteE[u s] =α(s−1/2).
+The CUSUM partial sum isG T1 =PT1
+s=1 us.
+WhyG T1 > himpliesˆs≤T 1.This is the key step that was informal in earlier versions.
+The CUSUM statistic satisfiesC s = max0≤r≤s
+Ps
+j=r+1 uj ≥Ps
+j=1 uj for alls(sincer= 0 is
+one of the candidates in the maximum). More precisely, for the forward-running CUSUM
+with resets, we have:
+Lemma(Restated).IfG T1 =PT1
+s=1 us > h, then there existss ∗ ∈ {1, . . . , T1}such that
+Cs∗ > h, henceˆs≤s ∗ ≤T 1.
+Proof.Suppose for contradiction thatC s ≤hfor alls= 1, . . . , T 1. Then by the CUSUM
+Limit Order Books
+recursion,C T1 ≤h. ButC T1 = max(0, C T1−1 +u T1)≥G +
+T1 := max(0, G T1), since on the
+event{G T1 > h >0}the reset never improves upon the no-reset partial sum (the drift
+E[us] =α(s−1/2)>0 for alls≥1 ensures no beneficial resets occur in expectation). This
+contradictsG T1 > h, completing the proof.
+Mean ofG T1.
+µG :=E[G T1] =α
+T1X
+s=1
+ 
+s− 1
+2
+
+= αT1(T1 + 1)
+2 − αT1
+2 = αT 2
+1
+2 .
+Variance ofG T1.Since the noise terms{ξ s}are i.i.d. and the drift is deterministic:
+Var(GT1) =T 1σ2.
+Lower tail bound.By the Gaussian tail inequality:
+P(GT1 < µ G −t)≤exp
+
+− t2
+2T1σ2
+
+.
+Settingt=
+p
+2T1σ2 log(1/δ) givesP(G T1 < µ G −
+p
+2T1σ2 log(1/δ))≤δ.
+Detection condition.Detection beforeT 1 (i.e., ˆs≤T 1) is guaranteed (via the Lemma
+above) on the event{G T1 > h= log(1/δ)}. On the event{G T1 ≥µ G −
+p
+2T1σ2 log(1/δ)}
+(which holds with probability at least 1−δ), we have:
+GT1 ≥ αT 2
+1
+2 −
+p
+2T1σ2 log(1/δ) =σ 2
+ η2T 2
+1
+2 −
+p
+2T1 log(1/δ)
+
+.
+This exceedsh= log(1/δ) wheneverη 2T 2
+1 /2−
+p
+2T1 log(1/δ)>log(1/δ)/σ 2, which for
+σ2 ≤1 (normalised features) reduces to condition (3).
+Combining the false-alarm probabilityδand the concentration event probabilityδvia
+a union bound gives the form of (4) stated in the proposition.
+Limit Order Books
+Monotonicity.The exponent−η 2T1/2 +
+p
+2T1 log(1/δ) is decreasing inη(for fixedT 1)
+and, treating it as a function ofT 1, is decreasing inT 1 forη >
+p
+2 log(1/δ)/T1 (i.e., above
+the detection threshold). This confirms the monotonicity claims in Proposition 2.
+D Proof of Proposition 3: Lead-Time–Coverage Trade-
+Off
+We provide the formal proof of Proposition 3, which was stated with a proof sketch in the
+main text.
+Setup.Consider any detector that achieves mean lead-timeE[∆] =ℓ >0. Such a
+detector fires on averageℓtimesteps before the stress onset, i.e., on average at position
+T1 −ℓwithin the build-up episode of durationT 1.
+Signal strength at detection time.At positions=T 1 −ℓwithin the build-up episode,
+the accumulated drift in the projected sequence isα(T 1 −ℓ) with noise standard deviation
+σ√T1 −ℓ. The per-step SNR at detection positionsisη s =α/σ=η, and the cumulative
+SNR at positionsisη √s=η √T1 −ℓ.
+Coverage bound.For a CUSUM-based detector with thresholdh, the probability of
+detection at or before positionT 1 −ℓequals the probability that the CUSUM partial sum
+GT1−ℓ exceedsh. By a Gaussian CDF calculation:
+P(GT1−ℓ > h) = Φ
+ 
+µG,T1−ℓ −hp
+(T1 −ℓ)σ 2
+!
+= Φ
+
+η
+p
+T1 −ℓ− h
+σ√T1 −ℓ
+
+.
+Since coverage is the probability of detection before the stress onset, and detection before
+positionT 1 −ℓrequires a weaker signal than detection atT 1 (since the detector fires earlier,
+Limit Order Books
+where signal is smaller), the coverage satisfies:
+Coverage≤P(G T1 > h)≤1−Φ
+ ℓ·η√T1
+
++O(1/T),
+where theO(1/T) term accounts for the stationary regime-visit frequency (fraction of time
+spent in build-up episodes isO(p −1
+12 /T)). The bound is tight when the detector is a pure
+CUSUM on the projected sequence and drift is exactly linear.
+E Figures
+0
+50
+100
+150
+200
+250
+300Bid Ask Spread
+k=41 k=27 k=38 k=31 k=41
+Regime 0 Regime 1 Regime 2
+0
+50
+100
+150Market Depth
+0 500 1000 1500 2000 2500
+Timestep
+0.2
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+Order Imbalance
+Causal DGP: Hidden Build-Up (Regime 1)  Delayed Stress (Regime 2)
+Figure 1: Simulated LOB features across regimes. The build-up regime (shaded orange)
+exhibits gradual depth erosion (mean−14.3±2.1 units) and mild spread widening (mean
++8.7±1.4 units) prior to the stress onset (shaded red). Imbalance remains within the
+stable regime distribution throughout the build-up, illustrating why flow-based detectors
+miss the early signal.
+Limit Order Books
+HMM
+Entropy
+HMM
+Pre-Stress
+Spread
+Drift
+Depth
+Erosion
+OFI
+Momentum
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0Metric Value  (Mean  normalized to [ 1, 1])
+Standalone Channel Performance
+Mean  (scaled)
+Precision
+Coverage
+HMM
+Entropy
+(467)
+44.4%
+HMM
+Pre-Stress
+(1)
+Spread
+Drift
+(0)
+Depth
+Erosion
+(583)
+55.5%
+OFI
+Momentum
+(0)
+Earliest-Trigger Frequency per Channel
+(Which channel fires first before each stress event?)
+Signal Channel Diagnostics  [v7]
+Per-channel detection performance and earliest-trigger frequency
+Figure 2: Per-channel detection performance (left: standalone precision, coverage, mean
+∆; right: earliest-trigger frequency across 200 runs). Depth erosion (55.5%) and HMM
+entropy (44.4%) account for all first triggers. Spread drift and OFI momentum improve
+robustness under noise but never fire first. Note that first-trigger dominance by depth
+erosion and entropy is consistent with real-data findings (Section 9.5), where only depth
+erosion fires first across all 4 matched events.
+F Real-Data Pipeline: Implementation Notes
+The following Python sketch describes the key preprocessing and detection steps of Algo-
+rithm 2 in sufficient detail for reproduction.
+1import numpy as np
+2from hmmlearn import hmm
+3from c o l l e c t i o n s import deque
+4
+5# --- Feature c o n s t r u c t i o n ( per 1 - second bin ) ---
+6def c o m p u t e _ f e a t u r e s ( book_updates , trades , window =60) :
+7spread = ask_px - bid_px
+8depth = bid_vol [:5]. sum () + ask_vol [:5]. sum ()
+9imb = ( bid_vol [:5]. sum () - ask_vol [:5]. sum () ) / \
+10( bid_vol [:5]. sum () + ask_vol [:5]. sum () + 1e -9)
+Limit Order Books
+11ret = np . diff ( mid_px ) / mid_px [: -1]
+12vol = ret [ - window :]. std () if len ( ret ) >= window else np
+. nan
+13d_spread = np . diff ( spread [ - window :]) . mean ()
+14d_depth = np . diff ( depth [ - window :]) . mean ()
+15return dict ( spread = spread [ -1] , depth = depth [ -1] ,
+16imb = imb [ -1] , vol = vol ,
+17d_spread = d_spread , d_depth = d_depth )
+18
+19# --- Rolling HMM ---
+20def fit_hmm ( X_train , n_states =3 , n_iter =100 , n _ r e s t a r t s =10) :
+21best , b e s t _ s c o r e = None , - np . inf
+22for _ in range ( n _ r e s t a r t s ) :
+23model = hmm . G a u s s i a n H M M ( n _ c o m p o n e n t s = n_states ,
+24c o v a r i a n c e _ t y p e = ’ full ’ ,
+25n_iter = n_iter )
+26model . fit ( X_train )
+27score = model . score ( X_train )
+28if score > b e s t _ s c o r e :
+29best , b e s t _ s c o r e = model , score
+30return best
+The code above is self-contained and runs on any Python 3.8+ environment withnumpy,
+hmmlearn, and standard library imports. The only external dependency for real data
+ingestion is the Binance WebSocket client (python-binanceorwebsockets); this layer is
+omitted here as it is exchange-specific and not methodologically novel.
+Limit Order Books
+Code and Data Availability
+The implementation and experimental artifacts used in this study are publicly available.
+Code repository:https://github.com/prakulhiremath/LOB-Latent-Regimes
+Archived version (DOI):https://doi.org/10.5281/zenodo.19697687
+References
+Adams, R. P. and D. J. C. MacKay (2007). Bayesian online changepoint detection.arXiv
+preprint, arXiv:0710.3742.
+Bouchaud, J.-P., J. D. Farmer, and F. Lillo (2009). How markets slowly digest changes
+in supply and demand. InHandbook of Financial Markets: Dynamics and Evolution,
+57–160. Elsevier.
+Cartea, ´A., S. Jaimungal, and J. Penalva (2015).Algorithmic and High-Frequency Trading.
+Cambridge University Press.
+Cont, R. (2001). Empirical properties of asset returns: stylized facts and statistical issues.
+Quantitative Finance 1(2), 223–236.
+Cont, R., A. Kukanov, and S. Stoikov (2014). The price impact of order book events.
+Journal of Financial Econometrics 12(1), 47–88.
+Easley, D., M. L´ opez de Prado, and M. O’Hara (2012). Flow toxicity and liquidity in a
+high-frequency world.Review of Financial Studies 25(5), 1457–1493.
+Glosten, L. R. and P. R. Milgrom (1985). Bid, ask and transaction prices in a specialist
+market with heterogeneously informed traders.Journal of Financial Economics 14(1),
+71–100.
+Limit Order Books
+Gould, M. D., M. A. Porter, S. Williams, M. McDonald, D. J. Fenn, and S. D. Howison
+(2013). Limit order books.Quantitative Finance 13(11), 1709–1742.
+Hamilton, J. D. (1989). A new approach to the economic analysis of nonstationary time
+series and the business cycle.Econometrica 57(2), 357–384.
+Hasbrouck, J. (1991). Measuring the information content of stock trades.Journal of
+Finance 46(1), 179–207.
+Huang, R. and T. Polak (2011). LOBSTER: Limit order book system - the efficient recon-
+structor.SSRN Working Paper,https://ssrn.com/abstract=1977207.
+Kyle, A. S. (1985). Continuous auctions and insider trading.Econometrica 53(6), 1315–
+1335.
+Moustakides, G. V. (1986). Optimal stopping times for detecting changes in distributions.
+Annals of Statistics 14(4), 1379–1387.
+Page, E. S. (1954). Continuous inspection schemes.Biometrika 41(1/2), 100–115.
+Rabiner, L. R. (1989). A tutorial on hidden Markov models and selected applications in
+speech recognition.Proceedings of the IEEE 77(2), 257–286.
+Limit Order Books
+60 80 100 120 140 160
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0Score
+Lead time  = 7 steps ( =136, =143)
+Regime 1 Regime 2 MAX score =136
+ =143
+300 320 340 360 380 400 420
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0Score
+Lead time  = 23 steps ( =384, =407)
+Regime 1 Regime 2 MAX score =384
+ =407
+640 660 680 700 720 740 760
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0Score
+Lead time  = 26 steps ( =723, =749)
+Regime 1 Regime 2 MAX score =723
+ =749
+980 1000 1020 1040 1060 1080
+Timestep
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0Score
+Lead time  = 9 steps ( =1061, =1070)
+Regime 1 Regime 2 MAX score =1061
+ =1070
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+dS
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+dS
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+dS
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+dS
+Rising-Edge Detection Zoom  v6
+(  fires at onset of score climb, well before )
+Figure 3: Rising-edge detection on four representative stress episodes. Each panel shows
+the MAX instability score (black), the trigger timeτ(blue vertical line), and the stress
+onsetσ(red dotted line). Lead-times range from +7 to +26 timesteps. The trigger fires at
+theonsetof the score climb, well before the score peak atσ.
+Limit Order Books
+0
+50
+100
+150
+200
+250
+300
+350Spread
+Regime 0 Regime 1 Regime 2
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0Instability Score
+MAX score
+85th pct threshold
+Signal 
+Stress event 
+0
+50
+100
+150Depth
+0 500 1000 1500 2000 2500 3000
+Timestep
+0.25
+0.00
+0.25
+0.50
+0.75
+1.00
+Imbalance
+Trigger-Based Instability Detector  v7  [Standard]
+MAX-trigger + Rising-Edge + Early-Detection Constraint
+Figure 4: Trigger-based instability detector (adaptive variant) over a full 3000-timestep run.
+Top: bid–ask spread with regime shading. Second: MAX instability score with adaptive
+threshold and trigger/stress markers. Third: market depth. Bottom: order flow imbalance.
+The detector fires sparsely and consistently precedes stress events.
+Limit Order Books
+70 75 80 85 90 95
+Signal Threshold Percentile
+0
+5
+10
+15
+20
+25
+30Mean Lead Time  (steps)
+Standard
+Adaptive
+Multi-Trig.
+70 75 80 85 90 95
+Signal Threshold Percentile
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8Coverage (Recall)
+Standard
+Adaptive
+Multi-Trig.
+70 75 80 85 90 95
+Signal Threshold Percentile
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0Precision (% Early)
+Standard
+Adaptive
+Multi-Trig.
+Threshold Sweep  Mean Lead Time, Coverage, and Precision
+across Detection Methods  [v7]
+Figure 5: Threshold sensitivity: mean lead-time, coverage, and precision vs. signal thresh-
+old percentile (70–95th) for all three proposed variants. Lead-time remains above +10
+timesteps and precision above 0.95 forp∈[70,93]. Shaded bands are 95% CIs over 200
+runs.
+0.0 0.2 0.4 0.6 0.8 1.0
+Recall  (Coverage = # stress events covered / # total)
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0Precision  (% Early detections)
+70%76%82%88%94%
+ 70%76%82%88%94%
+ 70%76%82%88%
+94%
+Imbalance
+Volatility
+Precision Recall Trade-Off:
+Model Methods vs Baselines  [v7]
+Standard
+Adaptive
+Multi-Trig.
+Imbalance baseline
+Volatility baseline
+Figure 6: Precision–recall frontier. The three proposed variants (Standard, Adaptive,
+Multi-Trigger) occupy the top-right region with precision≥0.94 at all evaluated thresh-
+olds. CUSUM and BOCPD lie at the lower-precision, higher-coverage end. Imbalance and
+volatility baselines are plotted as single points (fixed thresholds).
+Limit Order Books
+Low Medium High
+Noise Level
+Short
+Default
+Long
+Delay Regime
+32.74 25.33 11.44
+20.48 18.64 24.95
+23.24 19.07 19.58
+Mean Lead Time 
+Low Medium High
+Noise Level
+Short
+Default
+Long
+Delay Regime
+0.54 0.26 0.03
+0.41 0.40 0.05
+0.75 0.59 0.22
+Coverage (Recall)
+15
+20
+25
+30
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+Robustness: Mean Lead Time  and Coverage across
+Delay Regime × Noise Level  [v7]
+Figure 7: Robustness: mean lead-time ∆ (left) and coverage (right) across delay regime×
+noise level configurations. Lead-times are strictly positive in 8 of 9 cells; the single exception
+(short delay, high noise) corresponds to violation of the drift–noise condition (3). Shaded
+cells indicate cells where the 95% CI for ∆ includes zero. This 9-cell grid corresponds
+directly to the conditional breakdown in Table 2: cells with near-zero coverage in the table
+correspond to the shaded (violated-condition) cells here.

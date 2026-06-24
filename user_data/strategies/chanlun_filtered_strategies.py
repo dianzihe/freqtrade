@@ -4,18 +4,24 @@ from pandas import DataFrame
 
 from freqtrade.strategy import IStrategy
 
-from user_data.strategies.chanlun_core import add_chanlun_signals
+try:
+    from user_data.strategies.chanlun_core import add_chanlun_signals
+except ImportError:
+    from chanlun_core import add_chanlun_signals
 
 
 class ChanlunFilteredBaseStrategy(IStrategy):
     INTERFACE_VERSION = 3
 
     can_short = False
-    timeframe = "1m"
-    startup_candle_count = 30
+    # 改动：1m -> 15m
+    timeframe = "15m"
+    # 改动：startup 从 30 提升，保证 EMA/RSI/中枢都已收敛
+    startup_candle_count = 200
     process_only_new_candles = True
 
-    minimal_roi = {"0": 0.0}
+    # 改动：禁用“利润为 0 即平仓”的负期望 ROI，改成递减止盈表
+    minimal_roi = {"0": 0.04, "120": 0.02, "360": 0.01, "720": 0.0}
     stoploss = -0.05
     trailing_stop = False
 
@@ -31,7 +37,8 @@ class ChanlunFilteredBaseStrategy(IStrategy):
     }
     order_time_in_force = {"entry": "GTC", "exit": "GTC"}
 
-    min_stroke_gap = 3
+    # 改动：笔最小长度 3 -> 5
+    min_stroke_gap = 5
 
     def informative_pairs(self) -> list[tuple[str, str]]:
         return []
@@ -48,6 +55,10 @@ class ChanlunFilteredBaseStrategy(IStrategy):
     def _crossed_above(left: pd.Series, right: pd.Series) -> pd.Series:
         return (left > right) & (left.shift(1) <= right.shift(1))
 
+    @staticmethod
+    def _crossed_below(left: pd.Series, right: pd.Series) -> pd.Series:
+        return (left < right) & (left.shift(1) >= right.shift(1))
+
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         dataframe = add_chanlun_signals(dataframe, min_stroke_gap=self.min_stroke_gap)
 
@@ -63,6 +74,7 @@ class ChanlunFilteredBaseStrategy(IStrategy):
         dataframe["volume_mean"] = dataframe["volume"].rolling(20, min_periods=5).mean()
         dataframe["price_progress"] = dataframe["close"].pct_change(3).abs().fillna(0)
 
+        # 二买：依赖修正后的中枢有效性（中枢突破后会失效，避免陈旧中枢误判）
         prior_center_low = dataframe["chan_center_low"].shift(1)
         dataframe["chan_second_buy"] = (
             dataframe["chan_center_valid"].shift(1, fill_value=False)
@@ -174,9 +186,11 @@ class ChanlunMaRsiSecondBuyStrategy(ChanlunFilteredBaseStrategy):
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         super().populate_exit_trend(dataframe, metadata)
-        ma_bearish = dataframe["ema_fast"] < dataframe["ema_slow"]
+        # 改动：原来用 ema_fast < ema_slow（持续成立）会一进场就被打出，
+        # 改成均线死叉（穿越瞬间）才离场，减少震荡市频繁微亏。
+        ma_death_cross = self._crossed_below(dataframe["ema_fast"], dataframe["ema_slow"])
         dataframe.loc[
-            (dataframe["chan_exit_long"] == 1) | ma_bearish,
+            (dataframe["chan_exit_long"] == 1) | ma_death_cross,
             ["exit_long", "exit_tag"],
         ] = (1, "chanlun_second_buy_exit")
         return dataframe

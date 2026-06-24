@@ -2,29 +2,35 @@ from pandas import DataFrame
 
 from freqtrade.strategy import IStrategy
 
-from user_data.strategies.chanlun_core import add_chanlun_signals
+try:
+    from user_data.strategies.chanlun_core import add_chanlun_signals
+except ImportError:
+    from chanlun_core import add_chanlun_signals
 
 
 class ChanlunCenterBreakoutStrategy(IStrategy):
     """
-    First-pass Chanlun center breakout strategy.
+    缠论中枢突破策略（首版逻辑，已修正）。
 
-    Rule definition:
-    - A fractal is confirmed by a three-candle local high or low.
-    - Alternating fractals form strokes.
-    - The overlapping price range of the latest three strokes forms a center.
-    - A close above the previous center high enters long.
-    - A close below the previous center low exits long.
+    规则：
+    - 经过 K 线包含处理后，由三根合并K线确认分型。
+    - 交替分型形成笔。
+    - 最近三笔的重叠价格区间形成中枢。
+    - 收盘突破上一中枢上沿做多，跌破中枢下沿离场。
     """
 
     INTERFACE_VERSION = 3
 
     can_short = False
-    timeframe = "1m"
-    startup_candle_count = 120
+    # 改动：从 1m 提升到 15m，降低噪音与假突破
+    timeframe = "15m"
+    # 改动：包含处理 + 中枢需要足够历史，提高 startup
+    startup_candle_count = 200
     process_only_new_candles = True
 
-    minimal_roi = {"0": 0.0}
+    # 改动：原来 {"0": 0.0} 会在利润刚到 0 就强制平仓，
+    # 造成“盈利砍在0、亏损放到-5%”的负期望，这里改成递减止盈表。
+    minimal_roi = {"0": 0.04, "120": 0.02, "360": 0.01, "720": 0.0}
     stoploss = -0.05
     trailing_stop = False
 
@@ -39,7 +45,8 @@ class ChanlunCenterBreakoutStrategy(IStrategy):
         "stoploss_on_exchange": False,
     }
     order_time_in_force = {"entry": "GTC", "exit": "GTC"}
-    min_stroke_gap = 3
+    # 改动：笔的最小长度从 3 提升到 5（更接近缠论标准）
+    min_stroke_gap = 5
 
     plot_config = {
         "main_plot": {

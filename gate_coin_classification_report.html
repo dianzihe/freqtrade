@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gate 交易所币种分类报告</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; background: #f5f6f8; color: #1d1d1f; line-height: 1.6; }
+.header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: white; padding: 32px 24px; }
+.header h1 { font-size: 22px; font-weight: 600; margin-bottom: 8px; }
+.header p { font-size: 13px; color: rgba(255,255,255,0.7); }
+.summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; padding: 20px 24px; background: white; border-bottom: 1px solid #e5e5e7; }
+.summary-card { text-align: center; padding: 12px; background: #f5f6f8; border-radius: 8px; }
+.summary-card .label { font-size: 11px; color: #86868b; margin-bottom: 4px; }
+.summary-card .value { font-size: 20px; font-weight: 600; }
+.section { padding: 24px; }
+.section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 4px 10px; border-radius: 6px; font-weight: 500; }
+.badge-stable { background: #e1f5ee; color: #0f6e56; }
+.badge-mid { background: #eeedfe; color: #534ab7; }
+.badge-wild { background: #faece7; color: #993c1d; }
+.coin-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; border: 0.5px solid #e5e5e7; }
+.coin-table th { font-size: 11px; font-weight: 500; color: #86868b; padding: 10px 12px; text-align: left; background: #f5f6f8; border-bottom: 0.5px solid #e5e5e7; }
+.coin-table td { font-size: 13px; padding: 10px 12px; border-bottom: 0.5px solid #e5e5e7; }
+.coin-table tr:last-child td { border-bottom: none; }
+.coin-table tr:hover { background: #f5f6f8; }
+.symbol { font-weight: 600; }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.chart-box { background: white; border-radius: 12px; padding: 16px; border: 0.5px solid #e5e5e7; }
+.chart-box h3 { font-size: 13px; font-weight: 500; color: #86868b; margin-bottom: 8px; }
+.cat-desc { font-size: 13px; color: #86868b; margin-bottom: 16px; line-height: 1.5; }
+.highlight { font-weight: 600; color: #1d1d1f; }
+.method { background: white; border-radius: 12px; padding: 20px; border: 0.5px solid #e5e5e7; }
+.method h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+.method ul { font-size: 13px; color: #424245; line-height: 1.7; }
+.method li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Gate 交易所币种分类报告</h1>
+  <p>基于 1 分钟级历史数据的多维度量化分析 | 192 个币种（排除稳定币） | 数据覆盖约 14 天</p>
+</div>
+
+<div class="summary-grid">
+  <div class="summary-card"><div class="label">分析币种总数</div><div class="value">192</div></div>
+  <div class="summary-card"><div class="label"><span class="badge badge-stable">主流稳健币</span></div><div class="value" style="color:#0f6e56">27</div></div>
+  <div class="summary-card"><div class="label"><span class="badge badge-mid">中间币</span></div><div class="value" style="color:#534ab7">72</div></div>
+  <div class="summary-card"><div class="label"><span class="badge badge-wild">妖币</span></div><div class="value" style="color:#993c1d">38</div></div>
+  <div class="summary-card"><div class="label">未分类</div><div class="value" style="color:#86868b">55</div></div>
+</div>
+
+<!-- 分类标准 -->
+<div class="section">
+  <div class="method">
+    <h3>分类方法论</h3>
+    <ul>
+      <li><strong>成交额</strong>：日均成交额 = 日均 close × volume 总和，衡量市场流动性深度</li>
+      <li><strong>波动率</strong>：日化波动率 = 分钟收益率标准差 × √1440，衡量价格稳定性</li>
+      <li><strong>跳变频率</strong>：单分钟涨跌幅 > 2% 的分钟数占比，衡量异常脉冲</li>
+      <li><strong>趋势 R²</strong>：日收盘价线性拟合 R²，衡量趋势可追踪性</li>
+      <li><strong>放量突变</strong>：日成交额超过均值 2 倍的天数占比，衡量突发性爆量</li>
+      <li><strong>日内极差</strong>：(high-low)/close 日均值，衡量日内价格伸展幅度</li>
+      <li>稳定币/锚定币（FDUSD/USDC/USD1/TUSD/PAXG 等）已自动排除，日波动率 < 1% 的也已过滤</li>
+    </ul>
+  </div>
+</div>
+
+<!-- 雷达图对比 -->
+<div class="section">
+  <div class="chart-row">
+    <div class="chart-box">
+      <h3>三类币种特征雷达对比（典型代表）</h3>
+      <div style="position:relative; width:100%; height:300px;">
+        <canvas id="radarChart" role="img" aria-label="三类币种特征雷达对比图">雷达图</canvas>
+      </div>
+    </div>
+    <div class="chart-box">
+      <h3>日波动率 vs 日均成交额散点图</h3>
+      <div style="position:relative; width:100%; height:300px;">
+        <canvas id="scatterChart" role="img" aria-label="波动率与成交额散点图">散点图</canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 主流稳健币 -->
+<div class="section">
+  <div class="section-title"><span class="badge badge-stable">主流稳健币 Top 5</span> 高成交额 + 低波动 + 跳变极少 + 趋势可追踪</div>
+  <div class="cat-desc">特征：<span class="highlight">成交额排名前 50%</span>，日波动率在后 40%（< 6%），跳变频率接近 0%，趋势 R² 较高（> 0.4）。适合趋势跟踪和低频策略，行情相对可预测。</div>
+  <table class="coin-table">
+    <tr><th>币种</th><th>日均成交额</th><th>日波动率</th><th>跳变 >2% 频率</th><th>趋势 R²</th><th>放量突变</th><th>日内极差</th><th>稳健评分</th></tr>
+    <tr><td class="symbol">SOL</td><td>$114.3M</td><td>3.61%</td><td>0.000%</td><td>0.627</td><td>0.00%</td><td>5.18%</td><td style="color:#0f6e56;font-weight:600">0.912</td></tr>
+    <tr><td class="symbol">ETH</td><td>$398.1M</td><td>3.03%</td><td>0.000%</td><td>0.377</td><td>0.00%</td><td>3.94%</td><td style="color:#0f6e56;font-weight:600">0.890</td></tr>
+    <tr><td class="symbol">LTC</td><td>$6.8M</td><td>2.90%</td><td>0.000%</td><td>0.412</td><td>0.00%</td><td>3.46%</td><td style="color:#0f6e56;font-weight:600">0.872</td></tr>
+    <tr><td class="symbol">HYPE</td><td>$40.1M</td><td>5.99%</td><td>0.000%</td><td>0.617</td><td>0.00%</td><td>9.05%</td><td style="color:#0f6e56;font-weight:600">0.870</td></tr>
+    <tr><td class="symbol">AAVE</td><td>$2.4M</td><td>4.74%</td><td>0.000%</td><td>0.843</td><td>0.00%</td><td>6.17%</td><td style="color:#0f6e56;font-weight:600">0.863</td></tr>
+  </table>
+</div>
+
+<!-- 中间币 -->
+<div class="section">
+  <div class="section-title"><span class="badge badge-mid">中间币 Top 5</span> 各项指标居中，流动性 Beta 适中</div>
+  <div class="cat-desc">特征：<span class="highlight">成交额中等偏小</span>，波动率 7-10% 区间，跳变频率偏低但偶有脉冲，趋势不极端。适合 Beta 策略、波动率交易或做市策略。</div>
+  <table class="coin-table">
+    <tr><th>币种</th><th>日均成交额</th><th>日波动率</th><th>跳变 >2% 频率</th><th>趋势 R²</th><th>放量突变</th><th>日内极差</th><th>中间评分</th></tr>
+    <tr><td class="symbol">XCN</td><td>$0.4M</td><td>8.41%</td><td>0.076%</td><td>0.336</td><td>7.14%</td><td>7.67%</td><td style="color:#534ab7;font-weight:600">0.914</td></tr>
+    <tr><td class="symbol">IP</td><td>$0.5M</td><td>9.31%</td><td>0.038%</td><td>0.238</td><td>0.00%</td><td>8.67%</td><td style="color:#534ab7;font-weight:600">0.855</td></tr>
+    <tr><td class="symbol">BAS</td><td>$0.6M</td><td>9.75%</td><td>0.114%</td><td>0.160</td><td>7.14%</td><td>13.47%</td><td style="color:#534ab7;font-weight:600">0.847</td></tr>
+    <tr><td class="symbol">PEAQ</td><td>$0.5M</td><td>9.76%</td><td>0.120%</td><td>0.215</td><td>14.29%</td><td>9.11%</td><td style="color:#534ab7;font-weight:600">0.842</td></tr>
+    <tr><td class="symbol">TA</td><td>$0.4M</td><td>7.16%</td><td>0.027%</td><td>0.191</td><td>7.14%</td><td>9.13%</td><td style="color:#534ab7;font-weight:600">0.820</td></tr>
+  </table>
+</div>
+
+<!-- 妖币 -->
+<div class="section">
+  <div class="section-title"><span class="badge badge-wild">妖币 Top 5</span> 高波动 + 高跳变 + 放量突变明显</div>
+  <div class="cat-desc">特征：<span class="highlight">日波动率 > 15%</span>，跳变频率 > 0.02%，日内极差可达 20-96%，趋势 R² 极低。适合短线狙击、事件驱动策略或高风险博弈，行情极不可预测。</div>
+  <table class="coin-table">
+    <tr><th>币种</th><th>日均成交额</th><th>日波动率</th><th>跳变 >2% 频率</th><th>趋势 R²</th><th>放量突变</th><th>日内极差</th><th>妖币评分</th></tr>
+    <tr><td class="symbol">H</td><td>$25.0M</td><td style="color:#993c1d;font-weight:600">43.62%</td><td style="color:#993c1d;font-weight:600">5.627%</td><td>0.008</td><td>14.29%</td><td style="color:#993c1d;font-weight:600">96.23%</td><td style="color:#993c1d;font-weight:600">0.951</td></tr>
+    <tr><td class="symbol">VELVET</td><td>$6.5M</td><td style="color:#993c1d;font-weight:600">36.09%</td><td style="color:#993c1d;font-weight:600">3.767%</td><td>0.065</td><td>14.29%</td><td style="color:#993c1d;font-weight:600">67.59%</td><td style="color:#993c1d;font-weight:600">0.923</td></tr>
+    <tr><td class="symbol">STG</td><td>$3.8M</td><td style="color:#993c1d">20.54%</td><td style="color:#993c1d">0.828%</td><td>0.322</td><td>35.71%</td><td style="color:#993c1d">31.45%</td><td style="color:#993c1d;font-weight:600">0.917</td></tr>
+    <tr><td class="symbol">ALLO</td><td>$4.8M</td><td style="color:#993c1d">17.04%</td><td style="color:#993c1d">0.674%</td><td>0.066</td><td>21.43%</td><td style="color:#993c1d">19.38%</td><td style="color:#993c1d;font-weight:600">0.886</td></tr>
+    <tr><td class="symbol">COAI</td><td>$3.8M</td><td style="color:#993c1d">20.21%</td><td style="color:#993c1d">1.030%</td><td>0.338</td><td>14.29%</td><td style="color:#993c1d">22.87%</td><td style="color:#993c1d;font-weight:600">0.874</td></tr>
+  </table>
+</div>
+
+<!-- 柱状图对比 -->
+<div class="section">
+  <div class="chart-row">
+    <div class="chart-box">
+      <h3>三类 Top5 日波动率对比</h3>
+      <div style="position:relative; width:100%; height:260px;">
+        <canvas id="volBarChart" role="img" aria-label="三类币种日波动率对比柱状图">柱状图</canvas>
+      </div>
+    </div>
+    <div class="chart-box">
+      <h3>三类 Top5 日均成交额对比</h3>
+      <div style="position:relative; width:100%; height:260px;">
+        <canvas id="amtBarChart" role="img" aria-label="三类币种日均成交额对比柱状图">柱状图</canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// 数据定义
+const stable = [
+  { symbol: 'SOL', vol: 3.61, amt: 114.3, jump: 0.0, r2: 0.627, spike: 0.0, range: 5.18, score: 0.912 },
+  { symbol: 'ETH', vol: 3.03, amt: 398.1, jump: 0.0, r2: 0.377, spike: 0.0, range: 3.94, score: 0.890 },
+  { symbol: 'LTC', vol: 2.90, amt: 6.8, jump: 0.0, r2: 0.412, spike: 0.0, range: 3.46, score: 0.872 },
+  { symbol: 'HYPE', vol: 5.99, amt: 40.1, jump: 0.0, r2: 0.617, spike: 0.0, range: 9.05, score: 0.870 },
+  { symbol: 'AAVE', vol: 4.74, amt: 2.4, jump: 0.0, r2: 0.843, spike: 0.0, range: 6.17, score: 0.863 },
+];
+const mid = [
+  { symbol: 'XCN', vol: 8.41, amt: 0.40, jump: 0.076, r2: 0.336, spike: 7.14, range: 7.67, score: 0.914 },
+  { symbol: 'IP', vol: 9.31, amt: 0.53, jump: 0.038, r2: 0.238, spike: 0.0, range: 8.67, score: 0.855 },
+  { symbol: 'BAS', vol: 9.75, amt: 0.57, jump: 0.114, r2: 0.160, spike: 7.14, range: 13.47, score: 0.847 },
+  { symbol: 'PEAQ', vol: 9.76, amt: 0.45, jump: 0.120, r2: 0.215, spike: 14.29, range: 9.11, score: 0.842 },
+  { symbol: 'TA', vol: 7.16, amt: 0.42, jump: 0.027, r2: 0.191, spike: 7.14, range: 9.13, score: 0.820 },
+];
+const wild = [
+  { symbol: 'H', vol: 43.62, amt: 25.0, jump: 5.627, r2: 0.008, spike: 14.29, range: 96.23, score: 0.951 },
+  { symbol: 'VELVET', vol: 36.09, amt: 6.5, jump: 3.767, r2: 0.065, spike: 14.29, range: 67.59, score: 0.923 },
+  { symbol: 'STG', vol: 20.54, amt: 3.8, jump: 0.828, r2: 0.322, spike: 35.71, range: 31.45, score: 0.917 },
+  { symbol: 'ALLO', vol: 17.04, amt: 4.8, jump: 0.674, r2: 0.066, spike: 21.43, range: 19.38, score: 0.886 },
+  { symbol: 'COAI', vol: 20.21, amt: 3.8, jump: 1.030, r2: 0.338, spike: 14.29, range: 22.87, score: 0.874 },
+];
+
+// 雷达图
+new Chart(document.getElementById('radarChart'), {
+  type: 'radar',
+  data: {
+    labels: ['成交额', '波动率', '跳变频率', '趋势 R\u00b2', '放量突变', '日内极差'],
+    datasets: [
+      {
+        label: '稳健币典型 (SOL)',
+        data: [95, 10, 0, 63, 0, 15],
+        backgroundColor: 'rgba(15,110,86,0.15)',
+        borderColor: '#0f6e56',
+        borderWidth: 2,
+        pointBackgroundColor: '#0f6e56',
+      },
+      {
+        label: '中间币典型 (XCN)',
+        data: [20, 40, 3, 34, 7, 35],
+        backgroundColor: 'rgba(83,74,183,0.15)',
+        borderColor: '#534ab7',
+        borderWidth: 2,
+        pointBackgroundColor: '#534ab7',
+      },
+      {
+        label: '妖币典型 (H)',
+        data: [40, 100, 56, 1, 14, 100],
+        backgroundColor: 'rgba(153,60,29,0.15)',
+        borderColor: '#993c1d',
+        borderWidth: 2,
+        pointBackgroundColor: '#993c1d',
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      r: {
+        beginAtZero: true,
+        max: 100,
+        ticks: { stepSize: 20, font: { size: 10 } },
+        pointLabels: { font: { size: 11 } },
+        grid: { color: 'rgba(0,0,0,0.06)' },
+      }
+    },
+    plugins: {
+      legend: { display: true, position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } }
+    }
+  }
+});
+
+// 散点图
+const scatterData = [];
+stable.forEach(c => scatterData.push({ x: c.amt, y: c.vol, label: c.symbol, cat: 'stable' }));
+mid.forEach(c => scatterData.push({ x: c.amt, y: c.vol, label: c.symbol, cat: 'mid' }));
+wild.forEach(c => scatterData.push({ x: c.amt, y: c.vol, label: c.symbol, cat: 'wild' }));
+
+new Chart(document.getElementById('scatterChart'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      {
+        label: '稳健币',
+        data: stable.map(c => ({ x: c.amt, y: c.vol })),
+        backgroundColor: '#0f6e56',
+        pointRadius: 6,
+      },
+      {
+        label: '中间币',
+        data: mid.map(c => ({ x: c.amt, y: c.vol })),
+        backgroundColor: '#534ab7',
+        pointRadius: 6,
+      },
+      {
+        label: '妖币',
+        data: wild.map(c => ({ x: c.amt, y: c.vol })),
+        backgroundColor: '#993c1d',
+        pointRadius: 6,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        title: { display: true, text: '日均成交额 (M USD)', font: { size: 11 } },
+        type: 'logarithmic',
+        ticks: { font: { size: 10 } },
+        grid: { color: 'rgba(0,0,0,0.06)' },
+      },
+      y: {
+        title: { display: true, text: '日波动率 (%)', font: { size: 11 } },
+        ticks: { font: { size: 10 } },
+        grid: { color: 'rgba(0,0,0,0.06)' },
+      }
+    },
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function(ctx) {
+            const labels = [...stable.map(c=>c.symbol), ...mid.map(c=>c.symbol), ...wild.map(c=>c.symbol)];
+            return labels[ctx.datasetIndex * 5 + ctx.dataIndex] + ': $' + ctx.parsed.x.toFixed(1) + 'M, vol=' + ctx.parsed.y.toFixed(1) + '%';
+          }
+        }
+      },
+      legend: { display: true, position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } }
+    }
+  }
+});
+
+// 波动率柱状图
+const allCoins = [...stable.map(c => ({...c, cat:'稳健币'})), ...mid.map(c => ({...c, cat:'中间币'})), ...wild.map(c => ({...c, cat:'妖币'}))];
+const volLabels = allCoins.map(c => c.symbol);
+const volData = allCoins.map(c => c.vol);
+const volColors = allCoins.map(c => c.cat === '稳健币' ? '#0f6e56' : c.cat === '中间币' ? '#534ab7' : '#993c1d');
+
+new Chart(document.getElementById('volBarChart'), {
+  type: 'bar',
+  data: {
+    labels: volLabels,
+    datasets: [{
+      label: '日波动率 (%)',
+      data: volData,
+      backgroundColor: volColors,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: { ticks: { font: { size: 10 }, autoSkip: false, maxRotation: 45 } },
+      y: { title: { display: true, text: '%', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+
+// 成交额柱状图
+const amtData = allCoins.map(c => c.amt);
+new Chart(document.getElementById('amtBarChart'), {
+  type: 'bar',
+  data: {
+    labels: volLabels,
+    datasets: [{
+      label: '日均成交额 (M USD)',
+      data: amtData,
+      backgroundColor: volColors,
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: { ticks: { font: { size: 10 }, autoSkip: false, maxRotation: 45 } },
+      y: {
+        type: 'logarithmic',
+        title: { display: true, text: 'M USD', font: { size: 11 } },
+        grid: { color: 'rgba(0,0,0,0.06)' },
+      }
+    },
+    plugins: { legend: { display: false } }
+  }
+});
+</script>
+
+</body>
+</html>

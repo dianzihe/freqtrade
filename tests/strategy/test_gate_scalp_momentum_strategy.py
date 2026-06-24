@@ -1,6 +1,6 @@
 import pandas as pd
 
-from user_data.strategies.GateScalpMomentumStrategy import GateScalpMomentumStrategy
+from user_data.strategies.gate_scalp_momentum_strategy import GateScalpMomentumStrategy
 
 
 def _ohlcv_frame(rows: int = 80) -> pd.DataFrame:
@@ -54,15 +54,16 @@ def test_entry_signal_requires_pullback_rebound_with_volume() -> None:
     assert result.loc[79, "enter_tag"] == "scalp_pullback_rebound"
 
 
-def test_exit_signal_marks_momentum_fade() -> None:
+def test_exit_signal_marks_weak_trend() -> None:
     strategy = GateScalpMomentumStrategy(config={})
     dataframe = _ohlcv_frame()
     dataframe["ema_fast"] = [101.0] * 79 + [99.5]
     dataframe["ema_slow"] = [100.0] * 80
-    dataframe["rsi"] = [55.0] * 79 + [47.0]
+    dataframe["rsi"] = [55.0] * 79 + [44.0]
     dataframe["momentum_3m"] = [0.003] * 79 + [-0.002]
+    dataframe["volume_mean"] = [100.0] * 80
 
     result = strategy.populate_exit_trend(dataframe, {"pair": "BTC/USDT"})
 
     assert result.loc[79, "exit_long"] == 1
-    assert result.loc[79, "exit_tag"] == "scalp_momentum_fade"
+    assert result.loc[79, "exit_tag"] == "scalp_weak_trend"
