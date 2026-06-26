@@ -10,6 +10,7 @@ logfile.txt
 !user_data/freqaimodels
 user_data/freqaimodels/*
 user_data/models/*
+user_data/tick_data/*
 user_data/notebooks/*
 user_data/data/*
 user_data/backtest_results/*

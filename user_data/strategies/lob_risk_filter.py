@@ -12,11 +12,13 @@ not contain historical order book snapshots.
 
 from __future__ import annotations
 
+import math
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from statistics import fmean
-from typing import Deque
+from typing import Any, Deque
 
+import numpy as np
 import pandas as pd
 
 
@@ -34,6 +36,19 @@ class LobRiskConfig:
 
 
 @dataclass(frozen=True)
+class LobHmmConfig(LobRiskConfig):
+    hmm_states: int = 3
+    hmm_min_samples: int = 120
+    hmm_training_window: int = 300
+    hmm_retrain_interval: int = 60
+    hmm_random_state: int = 42
+    hmm_n_iter: int = 100
+    entropy_scale: float = 0.35
+    prestress_scale: float = 0.40
+    prestress_state: int = 1
+
+
+@dataclass(frozen=True)
 class LobRiskSignal:
     pair: str
     ready: bool
@@ -45,6 +60,11 @@ class LobRiskSignal:
     depth_erosion: float = 0.0
     spread_drift_bps: float = 0.0
     imbalance: float = 0.0
+    hmm_ready: bool = False
+    hmm_entropy: float = 0.0
+    hmm_state: int = -1
+    hmm_prestress_probability: float = 0.0
+    hmm_model_version: int = 0
     reason: str = "ok"
 
 
@@ -56,6 +76,33 @@ class _PairState:
     ticks_since_trigger: int = 1_000_000
     risk_ticks_remaining: int = 0
     last_score: float = 0.0
+
+
+@dataclass
+class _HmmPairState:
+    spreads_bps: Deque[float]
+    depths: Deque[float]
+    scores: Deque[float]
+    features: Deque[list[float]]
+    ticks_since_trigger: int = 1_000_000
+    risk_ticks_remaining: int = 0
+    last_score: float = 0.0
+    model: Any | None = None
+    scaler_mean: np.ndarray | None = None
+    scaler_std: np.ndarray | None = None
+    updates_since_fit: int = 0
+    model_version: int = 0
+
+
+_AUTO_HMM = object()
+
+
+def _load_gaussian_hmm() -> Any | None:
+    try:
+        from hmmlearn.hmm import GaussianHMM
+    except Exception:
+        return None
+    return GaussianHMM
 
 
 class LobRiskFilter:
@@ -181,6 +228,159 @@ class LobRiskFilter:
         return sample[index]
 
 
+class LobHmmRiskFilter(LobRiskFilter):
+    """HMM-enhanced detector using posterior entropy as a risk channel."""
+
+    def __init__(
+        self,
+        config: LobHmmConfig | None = None,
+        hmm_model_cls: Any = _AUTO_HMM,
+    ) -> None:
+        self.config = config or LobHmmConfig()
+        self._hmm_model_cls = _load_gaussian_hmm() if hmm_model_cls is _AUTO_HMM else hmm_model_cls
+        maxlen = max(
+            self.config.long_window,
+            self.config.threshold_window,
+            self.config.min_history,
+            self.config.hmm_training_window,
+            self.config.hmm_min_samples,
+        ) + 2
+        self._hmm_states: defaultdict[str, _HmmPairState] = defaultdict(
+            lambda: _HmmPairState(
+                spreads_bps=deque(maxlen=maxlen),
+                depths=deque(maxlen=maxlen),
+                scores=deque(maxlen=maxlen),
+                features=deque(maxlen=maxlen),
+            )
+        )
+
+    def update_from_orderbook(self, pair: str, orderbook: dict) -> LobRiskSignal:
+        metrics = self._extract_metrics(orderbook)
+        if metrics is None:
+            return LobRiskSignal(pair=pair, ready=False, triggered=False, reason="invalid_orderbook")
+        if self._hmm_model_cls is None:
+            return LobRiskSignal(pair=pair, ready=False, triggered=False, reason="hmm_unavailable")
+
+        spread_bps, total_depth, imbalance = metrics
+        state = self._hmm_states[pair]
+        state.spreads_bps.append(spread_bps)
+        state.depths.append(total_depth)
+
+        enough_rolling = len(state.depths) >= self.config.min_history
+        depth_erosion = self._depth_erosion(state.depths) if enough_rolling else 0.0
+        spread_drift_bps = self._spread_drift(state.spreads_bps) if enough_rolling else 0.0
+        state.features.append(
+            [
+                spread_bps,
+                math.log(max(total_depth, 1e-12)),
+                imbalance,
+                depth_erosion,
+                spread_drift_bps,
+            ]
+        )
+
+        if len(state.features) < self.config.hmm_min_samples or not enough_rolling:
+            signal = LobRiskSignal(
+                pair=pair,
+                ready=False,
+                triggered=False,
+                spread_bps=spread_bps,
+                total_depth=total_depth,
+                depth_erosion=depth_erosion,
+                spread_drift_bps=spread_drift_bps,
+                imbalance=imbalance,
+                reason="warming_up",
+            )
+            state.scores.append(signal.score)
+            state.last_score = signal.score
+            state.ticks_since_trigger += 1
+            return signal
+
+        if state.model is not None:
+            state.updates_since_fit += 1
+        if state.model is None or state.updates_since_fit >= self.config.hmm_retrain_interval:
+            self._fit_model(state)
+
+        posterior = self._predict_posterior(state)
+        hmm_state = int(np.argmax(posterior))
+        hmm_entropy = float(-np.sum(posterior * np.log(posterior + 1e-12)))
+        prestress_idx = min(max(self.config.prestress_state, 0), len(posterior) - 1)
+        hmm_prestress_probability = float(posterior[prestress_idx])
+
+        score = max(
+            depth_erosion / max(self.config.depth_erosion_scale, 1e-12),
+            spread_drift_bps / max(self.config.spread_drift_scale, 1e-12),
+            hmm_entropy / max(self.config.entropy_scale, 1e-12),
+            hmm_prestress_probability / max(self.config.prestress_scale, 1e-12),
+            0.0,
+        )
+        threshold = self._adaptive_threshold(state.scores)
+        rising = score > state.last_score
+        edge_triggered = (
+            score > threshold
+            and rising
+            and state.ticks_since_trigger >= self.config.min_gap
+        )
+
+        if edge_triggered:
+            state.ticks_since_trigger = 0
+            state.risk_ticks_remaining = self.config.min_gap
+        else:
+            state.ticks_since_trigger += 1
+            state.risk_ticks_remaining = max(state.risk_ticks_remaining - 1, 0)
+        triggered = edge_triggered or state.risk_ticks_remaining > 0
+        state.scores.append(score)
+        state.last_score = score
+
+        return LobRiskSignal(
+            pair=pair,
+            ready=True,
+            triggered=triggered,
+            score=score,
+            threshold=threshold,
+            spread_bps=spread_bps,
+            total_depth=total_depth,
+            depth_erosion=depth_erosion,
+            spread_drift_bps=spread_drift_bps,
+            imbalance=imbalance,
+            hmm_ready=True,
+            hmm_entropy=hmm_entropy,
+            hmm_state=hmm_state,
+            hmm_prestress_probability=hmm_prestress_probability,
+            hmm_model_version=state.model_version,
+        )
+
+    def _fit_model(self, state: _HmmPairState) -> None:
+        features = np.asarray(list(state.features)[-self.config.hmm_training_window :], dtype=float)
+        mean = features.mean(axis=0)
+        std = features.std(axis=0)
+        std[std < 1e-12] = 1.0
+        scaled = (features - mean) / std
+        model = self._hmm_model_cls(
+            n_components=self.config.hmm_states,
+            covariance_type="full",
+            n_iter=self.config.hmm_n_iter,
+            random_state=self.config.hmm_random_state,
+        )
+        model.fit(scaled)
+        state.model = model
+        state.scaler_mean = mean
+        state.scaler_std = std
+        state.updates_since_fit = 0
+        state.model_version += 1
+
+    def _predict_posterior(self, state: _HmmPairState) -> np.ndarray:
+        if state.model is None or state.scaler_mean is None or state.scaler_std is None:
+            return np.full(self.config.hmm_states, 1.0 / self.config.hmm_states)
+        feature = np.asarray([state.features[-1]], dtype=float)
+        scaled = (feature - state.scaler_mean) / state.scaler_std
+        posterior = np.asarray(state.model.predict_proba(scaled), dtype=float)[-1]
+        total = posterior.sum()
+        if total <= 0:
+            return np.full(len(posterior), 1.0 / len(posterior))
+        return posterior / total
+
+
 def apply_lob_signal_to_dataframe(dataframe: pd.DataFrame, signal: LobRiskSignal) -> pd.DataFrame:
     """Annotate the latest row with a LOB risk signal."""
 
@@ -197,6 +397,11 @@ def apply_lob_signal_to_dataframe(dataframe: pd.DataFrame, signal: LobRiskSignal
         "lob_depth_erosion": 0.0,
         "lob_spread_drift_bps": 0.0,
         "lob_imbalance": 0.0,
+        "lob_hmm_ready": False,
+        "lob_hmm_entropy": 0.0,
+        "lob_hmm_state": -1,
+        "lob_hmm_prestress_probability": 0.0,
+        "lob_hmm_model_version": 0,
         "lob_risk_reason": "not_updated",
     }
     for column, value in defaults.items():
@@ -213,9 +418,15 @@ def apply_lob_signal_to_dataframe(dataframe: pd.DataFrame, signal: LobRiskSignal
     dataframe.at[last, "lob_depth_erosion"] = signal.depth_erosion
     dataframe.at[last, "lob_spread_drift_bps"] = signal.spread_drift_bps
     dataframe.at[last, "lob_imbalance"] = signal.imbalance
+    dataframe.at[last, "lob_hmm_ready"] = bool(signal.hmm_ready)
+    dataframe.at[last, "lob_hmm_entropy"] = signal.hmm_entropy
+    dataframe.at[last, "lob_hmm_state"] = signal.hmm_state
+    dataframe.at[last, "lob_hmm_prestress_probability"] = signal.hmm_prestress_probability
+    dataframe.at[last, "lob_hmm_model_version"] = signal.hmm_model_version
     dataframe.at[last, "lob_risk_reason"] = signal.reason
     dataframe["lob_risk_ready"] = dataframe["lob_risk_ready"].astype(object)
     dataframe["lob_risk_trigger"] = dataframe["lob_risk_trigger"].astype(object)
+    dataframe["lob_hmm_ready"] = dataframe["lob_hmm_ready"].astype(object)
     return dataframe
 
 
@@ -223,12 +434,22 @@ class LobRiskFilterMixin:
     """Mixin for Freqtrade strategies that want live/dry-run LOB risk columns."""
 
     lob_risk_config = LobRiskConfig()
+    lob_filter_mode = "simple"
+    lob_hmm_model_cls: Any = _AUTO_HMM
 
     @property
     def lob_risk_filter(self) -> LobRiskFilter:
         detector = getattr(self, "_lob_risk_filter", None)
         if detector is None:
-            detector = LobRiskFilter(self.lob_risk_config)
+            if self.lob_filter_mode == "hmm":
+                config = (
+                    self.lob_risk_config
+                    if isinstance(self.lob_risk_config, LobHmmConfig)
+                    else LobHmmConfig(**self.lob_risk_config.__dict__)
+                )
+                detector = LobHmmRiskFilter(config, hmm_model_cls=self.lob_hmm_model_cls)
+            else:
+                detector = LobRiskFilter(self.lob_risk_config)
             self._lob_risk_filter = detector
         return detector
 
