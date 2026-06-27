@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemeMartingaleStrategies 回测评估报告 v2</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f5f5f7; color: #1d1d1f; padding: 20px; line-height: 1.6; }
+        .container { max-width: 960px; margin: 0 auto; }
+        h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px 0; color: #1d1d1f; }
+        .subtitle { font-size: 13px; color: #6e6e73; margin: 0 0 24px 0; }
+        .card { background: white; border: 0.5px solid #d2d2d7; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        h2 { font-size: 16px; font-weight: 500; margin: 0 0 16px 0; color: #1d1d1f; }
+        h3 { font-size: 14px; font-weight: 500; margin: 0 0 8px 0; color: #1d1d1f; }
+        
+        /* Summary Cards */
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+        .summary-card { background: #f9f9fb; border-radius: 8px; padding: 12px 16px; }
+        .summary-card .label { font-size: 12px; color: #6e6e73; margin: 0 0 4px 0; }
+        .summary-card .value { font-size: 20px; font-weight: 500; margin: 0; color: #1d1d1f; }
+        .summary-card .value.positive { color: #34c759; }
+        .summary-card .value.negative { color: #ff3b30; }
+        .summary-card .sub { font-size: 11px; color: #6e6e73; margin: 4px 0 0 0; }
+        
+        /* Tables */
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th { text-align: left; padding: 8px 12px; color: #6e6e73; font-weight: 400; border-bottom: 0.5px solid #e5e5ea; }
+        thead th.right { text-align: right; }
+        tbody td { padding: 8px 12px; color: #1d1d1f; border-bottom: 0.5px solid #f2f2f7; }
+        tbody td.right { text-align: right; }
+        tbody tr.highlight { background: #f0f0ff; }
+        
+        /* Badges */
+        .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+        .badge-success { background: #e8f9ef; color: #34c759; }
+        .badge-warning { background: #fff8e8; color: #ff9500; }
+        .badge-danger { background: #ffe8e8; color: #ff3b30; }
+        .positive { color: #34c759; }
+        .negative { color: #ff3b30; }
+        
+        /* Info Box */
+        .info-box { background: #f9f9fb; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #6e6e73; line-height: 1.6; margin-top: 12px; }
+        .warning-box { background: #fff8e8; border: 1px solid #ff9500; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #666; line-height: 1.6; margin-top: 12px; }
+        .recommend-box { background: white; border: 2px solid #007aff; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        
+        /* List */
+        ul { font-size: 13px; color: #1d1d1f; line-height: 1.8; padding-left: 20px; }
+        li { margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>MemeMartingaleStrategies 回测评估报告</h1>
+    <p class="subtitle">数据范围：2026-06-08 ~ 2026-06-26（18天）| 初始资金：1000 USDT | 时间框架：1m</p>
+    
+    <!-- Summary Cards -->
+    <div class="summary-grid">
+        <div class="summary-card">
+            <p class="label">稳定币 - 最佳策略</p>
+            <p class="value">无有效策略</p>
+            <p class="sub">所有策略亏损或零交易</p>
+        </div>
+        <div class="summary-card">
+            <p class="label">妖币 - 最佳策略</p>
+            <p class="value positive">LimitedDca +16.85%</p>
+            <p class="sub">89笔交易，胜率80.9%</p>
+        </div>
+        <div class="summary-card">
+            <p class="label">妖币 - 最高胜率</p>
+            <p class="value positive">LimitedDca 80.9%</p>
+            <p class="sub">最大回撤仅1.04%</p>
+        </div>
+        <div class="summary-card">
+            <p class="label">妖币 - 最佳风险调整</p>
+            <p class="value positive">LimitedDca Calmar 1724</p>
+            <p class="sub">Sharpe 66.28, Sortino 66.95</p>
+        </div>
+    </div>
+    
+    <!-- Stable Coins Result -->
+    <div class="card">
+        <h2>稳定型货币（BTC/ETH/SOL/XRP）— 全部策略失效</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>策略</th>
+                    <th class="right">交易数</th>
+                    <th class="right">收益率</th>
+                    <th class="right">胜率</th>
+                    <th class="right">最大回撤</th>
+                    <th class="right">Calmar</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>LimitedDca</td>
+                    <td class="right">0</td>
+                    <td class="right">0.00%</td>
+                    <td class="right">0.0%</td>
+                    <td class="right">0.00%</td>
+                    <td class="right">0</td>
+                </tr>
+                <tr>
+                    <td>VolGrid</td>
+                    <td class="right">0</td>
+                    <td class="right">0.00%</td>
+                    <td class="right">0.0%</td>
+                    <td class="right">0.00%</td>
+                    <td class="right">0</td>
+                </tr>
+                <tr>
+                    <td>AntiMartingale</td>
+                    <td class="right">1</td>
+                    <td class="right negative">-0.03%</td>
+                    <td class="right negative">0.0%</td>
+                    <td class="right negative">0.03%</td>
+                    <td class="right negative">-106</td>
+                </tr>
+                <tr>
+                    <td>HedgeProxy</td>
+                    <td class="right">141</td>
+                    <td class="right negative">-1.40%</td>
+                    <td class="right negative">17.7%</td>
+                    <td class="right negative">1.40%</td>
+                    <td class="right negative">-106</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="info-box">
+            <strong>原因：</strong>稳定币波动率低，不满足入场条件（LimitedDca/VolGrid要求 drawdown &lt; -9%，RSI &lt; 32等极端条件）。HedgeProxy有交易但持续亏损，说明马丁策略不适用于稳定币的波动特征。
+        </div>
+    </div>
+    
+    <!-- Meme Coins Result -->
+    <div class="card">
+        <h2>妖币（H/VELVET/BEAT/VVV/DN）— 全部策略盈利</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>策略</th>
+                    <th class="right">交易数</th>
+                    <th class="right">绝对收益</th>
+                    <th class="right">收益率</th>
+                    <th class="right">胜率</th>
+                    <th class="right">最大回撤</th>
+                    <th class="right">Calmar</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="highlight">
+                    <td><strong>LimitedDca ✓</strong></td>
+                    <td class="right">89</td>
+                    <td class="right positive">+168.549 USDT</td>
+                    <td class="right positive">+16.85%</td>
+                    <td class="right positive">80.9%</td>
+                    <td class="right positive">1.04%</td>
+                    <td class="right positive">1724</td>
+                </tr>
+                <tr>
+                    <td>VolGrid</td>
+                    <td class="right">257</td>
+                    <td class="right positive">+164.308 USDT</td>
+                    <td class="right positive">+16.43%</td>
+                    <td class="right positive">74.3%</td>
+                    <td class="right negative">3.13%</td>
+                    <td class="right positive">557</td>
+                </tr>
+                <tr>
+                    <td>AntiMartingale</td>
+                    <td class="right">237</td>
+                    <td class="right positive">+24.565 USDT</td>
+                    <td class="right positive">+2.46%</td>
+                    <td class="right negative">33.3%</td>
+                    <td class="right negative">6.92%</td>
+                    <td class="right positive">37.7</td>
+                </tr>
+                <tr>
+                    <td>HedgeProxy</td>
+                    <td class="right">263</td>
+                    <td class="right positive">+20.149 USDT</td>
+                    <td class="right positive">+2.01%</td>
+                    <td class="right positive">60.1%</td>
+                    <td class="right positive">1.94%</td>
+                    <td class="right positive">110.3</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Per-Pair Analysis -->
+    <div class="card">
+        <h2>逐币分析（LimitedDca - 最佳策略）</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>交易对</th>
+                    <th class="right">交易数</th>
+                    <th class="right">收益</th>
+                    <th class="right">收益率</th>
+                    <th class="right">胜/负</th>
+                    <th class="right">胜率</th>
+                    <th class="right">评级</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>H/USDT</strong></td>
+                    <td class="right">38</td>
+                    <td class="right positive">+105.631 USDT</td>
+                    <td class="right positive">+10.56%</td>
+                    <td class="right">34/4</td>
+                    <td class="right positive">89.5%</td>
+                    <td class="right"><span class="badge badge-success">★★★★★ 最优</span></td>
+                </tr>
+                <tr>
+                    <td><strong>VELVET/USDT</strong></td>
+                    <td class="right">25</td>
+                    <td class="right positive">+32.465 USDT</td>
+                    <td class="right positive">+3.25%</td>
+                    <td class="right">21/4</td>
+                    <td class="right positive">84.0%</td>
+                    <td class="right"><span class="badge badge-success">★★★★ 优良</span></td>
+                </tr>
+                <tr>
+                    <td><strong>DN/USDT</strong></td>
+                    <td class="right">12</td>
+                    <td class="right positive">+19.669 USDT</td>
+                    <td class="right positive">+1.97%</td>
+                    <td class="right">10/2</td>
+                    <td class="right positive">83.3%</td>
+                    <td class="right"><span class="badge badge-success">★★★★ 优良</span></td>
+                </tr>
+                <tr>
+                    <td><strong>BEAT/USDT</strong></td>
+                    <td class="right">14</td>
+                    <td class="right positive">+10.784 USDT</td>
+                    <td class="right positive">+1.08%</td>
+                    <td class="right">7/7</td>
+                    <td class="right">50.0%</td>
+                    <td class="right"><span class="badge badge-warning">★★ 谨慎</span></td>
+                </tr>
+                <tr>
+                    <td><strong>VVV/USDT</strong></td>
+                    <td class="right">0</td>
+                    <td class="right">0.000 USDT</td>
+                    <td class="right">0.00%</td>
+                    <td class="right">0/0</td>
+                    <td class="right">0.0%</td>
+                    <td class="right"><span class="badge badge-danger">✘ 不适用</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Risk Analysis -->
+    <div class="card">
+        <h2>风险分析</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+            <div>
+                <h3>LimitedDca - 风险指标</h3>
+                <table>
+                    <tr style="border-bottom: 0.5px solid #e5e5ea;">
+                        <td style="padding: 6px 8px; color: #6e6e73;">最大回撤（绝对）</td>
+                        <td style="padding: 6px 8px; text-align: right; color: #34c759;">12.094 USDT (1.04%)</td>
+                    </tr>
+                    <tr style="border-bottom: 0.5px solid #e5e5ea;">
+                        <td style="padding: 6px 8px; color: #6e6e73;">Sharpe Ratio</td>
+                        <td style="padding: 6px 8px; text-align: right; color: #34c759;">66.28</td>
+                    </tr>
+                    <tr style="border-bottom: 0.5px solid #e5e5ea;">
+                        <td style="padding: 6px 8px; color: #6e6e73;">Sortino Ratio</td>
+                        <td style="padding: 6px 8px; text-align: right; color: #34c759;">66.95</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 8px; color: #6e6e73;">Calmar Ratio</td>
+                        <td style="padding: 6px 8px; text-align: right; color: #34c759;">1724.28</td>
+                    </tr>
+                </table>
+            </div>
+            <div>
+                <h3>VolGrid - 风险指标</h3>
+                <table>
+                    <tr style="border-bottom: 0.5px solid #e5e5ea;">
+                        <td style="padding: 6px 8px; color: #6e6e73;">最大回撤（绝对）</td>
+                        <td style="padding: 6px 8px; text-align: right; color: #ff3b30;">37.102 USDT (3.13%)</td>
+                    </tr>
+                    <tr style="border-bottom: 0.5px solid #e5e5ea;">
+                        <td style="padding: 6px 8px; color: #6e6e73;">Sharpe Ratio</td>
+                        <td style="padding: 6px 8px; text-align: right; color: #34c759;">45.31</td>
+                    </tr>
+                    <tr style="border-bottom: 0.5px solid #e5e5ea;">
+                        <td style="padding: 6px 8px; color: #6e6e73;">Sortino Ratio</td>
+                        <td style="padding: 6px 8px; text-align: right; color: #34c759;">28.85</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px 8px; color: #6e6e73;">Calmar Ratio</td>
+                        <td style="padding: 6px 8px; text-align: right; color: #34c759;">556.67</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="info-box">
+            <strong>风险评估：</strong>LimitedDca 回撤仅为 VolGrid 的 1/3，但收益率相近（+16.85% vs +16.43%），风险调整收益远超其他策略。Calmar 比率 1724 表示极低的回撤风险。
+        </div>
+    </div>
+    
+    <!-- Comparison with Previous Data -->
+    <div class="card">
+        <h2>与之前数据（13.5天）对比</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>策略</th>
+                    <th class="right">之前收益</th>
+                    <th class="right">现在收益</th>
+                    <th class="right">变化</th>
+                    <th class="right">之前胜率</th>
+                    <th class="right">现在胜率</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>LimitedDca</td>
+                    <td class="right">+154.8 USDT</td>
+                    <td class="right">+168.5 USDT</td>
+                    <td class="right positive">+13.7 USDT (+8.9%)</td>
+                    <td class="right">84.6%</td>
+                    <td class="right">80.9%</td>
+                </tr>
+                <tr>
+                    <td>VolGrid</td>
+                    <td class="right">+160.6 USDT</td>
+                    <td class="right">+164.3 USDT</td>
+                    <td class="right positive">+3.7 USDT (+2.3%)</td>
+                    <td class="right">77.4%</td>
+                    <td class="right">74.3%</td>
+                </tr>
+                <tr>
+                    <td>AntiMartingale</td>
+                    <td class="right">+50.5 USDT</td>
+                    <td class="right">+24.6 USDT</td>
+                    <td class="right negative">-25.9 USDT (-51.3%)</td>
+                    <td class="right">35.7%</td>
+                    <td class="right">33.3%</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="info-box">
+            新增4.5天数据后，LimitedDca和VolGrid收益进一步提升，验证了策略的稳定性。AntiMartingale收益率下降，说明该策略在近期市场环境中表现不佳。
+        </div>
+    </div>
+    
+    <!-- Final Recommendation -->
+    <div class="recommend-box">
+        <h2 style="color: #007aff;">最终建议</h2>
+        <div style="margin-bottom: 16px;">
+            <h3 style="color: #34c759;">✓ 推荐方案：LimitedDca 策略 + 精选币对</h3>
+            <ul>
+                <li>使用 <strong>MemeLimitedDcaMartingaleStrategy</strong></li>
+                <li>推荐使用币对：<strong>H/USDT</strong>（89.5%胜率）、<strong>VELVET/USDT</strong>（84%胜率）、<strong>DN/USDT</strong>（83.3%胜率）</li>
+                <li>建议排除：<strong>BEAT/USDT</strong>（仅50%胜率）、<strong>VVV/USDT</strong>（零交易信号）</li>
+                <li>初始stake_amount建议：50 USDT（账户1000 USDT时）</li>
+                <li>预期收益：约16-17% / 18天（年化约320-340%）</li>
+            </ul>
+        </div>
+        <div class="warning-box">
+            <strong>⚠️ 风险提示：</strong><br>
+            - 马丁策略在极端单边行情中可能导致巨大亏损（虽本策略有止损保护）<br>
+            - 妖币波动极大，需密切监控<br>
+            - 稳定币完全不适用，切勿尝试<br>
+            - 建议仅在在已有充分回测证明的币对上运行<br>
+            - 实盘前建议先运行 dry-run 验证
+        </div>
+    </div>
+</div>
+</body>
+</html>

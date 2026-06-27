@@ -32,7 +32,7 @@ def test_gate_data_update_script_dry_run_prints_download_command():
     assert "download-data" in output
     assert "user_data\\config-gate-data-200.json" in output
     assert "user_data\\pairs-gate-spot-200.json" in output
-    assert "--timeframes 1m" in output
+    assert "--timeframes 1m 5m 15m 1h" in output
     assert "--days 3" in output
     assert "--trading-mode spot" in output
 

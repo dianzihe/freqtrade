@@ -1,0 +1,489 @@
+{
+  "data_dir": "F:\\source\\freqtrade\\user_data\\data\\gate",
+  "required_files": 48,
+  "present_files": 48,
+  "missing": [],
+  "files": [
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\BTC_USDT-1m.feather",
+      "rows": 23704,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-08T00:00:00+00:00",
+      "end": "2026-06-24T11:03:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\BTC_USDT_USDT-1m-futures.feather",
+      "rows": 9349,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-18T00:00:00+00:00",
+      "end": "2026-06-24T11:48:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\BTC_USDT-15m.feather",
+      "rows": 11758,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-02-22T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\BTC_USDT_USDT-15m-futures.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\BTC_USDT_USDT-1h-mark.feather",
+      "rows": 1450,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T09:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\BTC_USDT_USDT-1h-funding_rate.feather",
+      "rows": 182,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T08:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\ETH_USDT-1m.feather",
+      "rows": 23704,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-08T00:00:00+00:00",
+      "end": "2026-06-24T11:03:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\ETH_USDT_USDT-1m-futures.feather",
+      "rows": 9349,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-18T00:00:00+00:00",
+      "end": "2026-06-24T11:48:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\ETH_USDT-15m.feather",
+      "rows": 11758,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-02-22T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\ETH_USDT_USDT-15m-futures.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\ETH_USDT_USDT-1h-mark.feather",
+      "rows": 1450,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T09:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\ETH_USDT_USDT-1h-funding_rate.feather",
+      "rows": 182,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T08:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\SOL_USDT-1m.feather",
+      "rows": 23705,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-08T00:00:00+00:00",
+      "end": "2026-06-24T11:04:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\SOL_USDT_USDT-1m-futures.feather",
+      "rows": 9349,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-18T00:00:00+00:00",
+      "end": "2026-06-24T11:48:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\SOL_USDT-15m.feather",
+      "rows": 11758,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-02-22T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\SOL_USDT_USDT-15m-futures.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\SOL_USDT_USDT-1h-mark.feather",
+      "rows": 1450,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T09:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\SOL_USDT_USDT-1h-funding_rate.feather",
+      "rows": 182,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T08:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\XRP_USDT-1m.feather",
+      "rows": 23705,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-08T00:00:00+00:00",
+      "end": "2026-06-24T11:04:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\XRP_USDT_USDT-1m-futures.feather",
+      "rows": 9349,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-18T00:00:00+00:00",
+      "end": "2026-06-24T11:48:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\XRP_USDT-15m.feather",
+      "rows": 11758,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-02-22T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\XRP_USDT_USDT-15m-futures.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\XRP_USDT_USDT-1h-mark.feather",
+      "rows": 1450,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T09:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\XRP_USDT_USDT-1h-funding_rate.feather",
+      "rows": 182,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T08:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\BNB_USDT-1m.feather",
+      "rows": 23704,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-08T00:00:00+00:00",
+      "end": "2026-06-24T11:03:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\BNB_USDT_USDT-1m-futures.feather",
+      "rows": 9349,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-18T00:00:00+00:00",
+      "end": "2026-06-24T11:48:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\BNB_USDT-15m.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\BNB_USDT_USDT-15m-futures.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\BNB_USDT_USDT-1h-mark.feather",
+      "rows": 1450,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T09:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\BNB_USDT_USDT-1h-funding_rate.feather",
+      "rows": 182,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T08:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\DOGE_USDT-1m.feather",
+      "rows": 23704,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-08T00:00:00+00:00",
+      "end": "2026-06-24T11:03:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\DOGE_USDT_USDT-1m-futures.feather",
+      "rows": 9349,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-18T00:00:00+00:00",
+      "end": "2026-06-24T11:48:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\DOGE_USDT-15m.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\DOGE_USDT_USDT-15m-futures.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\DOGE_USDT_USDT-1h-mark.feather",
+      "rows": 1450,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T09:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\DOGE_USDT_USDT-1h-funding_rate.feather",
+      "rows": 181,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T00:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\ADA_USDT-1m.feather",
+      "rows": 23703,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-08T00:00:00+00:00",
+      "end": "2026-06-24T11:02:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\ADA_USDT_USDT-1m-futures.feather",
+      "rows": 9349,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-18T00:00:00+00:00",
+      "end": "2026-06-24T11:48:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\ADA_USDT-15m.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\ADA_USDT_USDT-15m-futures.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\ADA_USDT_USDT-1h-mark.feather",
+      "rows": 1450,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T09:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\ADA_USDT_USDT-1h-funding_rate.feather",
+      "rows": 182,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T08:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\AVAX_USDT-1m.feather",
+      "rows": 23703,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-08T00:00:00+00:00",
+      "end": "2026-06-24T11:02:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\AVAX_USDT_USDT-1m-futures.feather",
+      "rows": 9349,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-06-18T00:00:00+00:00",
+      "end": "2026-06-24T11:48:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\AVAX_USDT-15m.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\AVAX_USDT_USDT-15m-futures.feather",
+      "rows": 5806,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T11:15:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\AVAX_USDT_USDT-1h-mark.feather",
+      "rows": 1450,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T09:00:00+00:00",
+      "ok": true
+    },
+    {
+      "path": "F:\\source\\freqtrade\\user_data\\data\\gate\\futures\\AVAX_USDT_USDT-1h-funding_rate.feather",
+      "rows": 182,
+      "missing_columns": [],
+      "duplicate_timestamps": 0,
+      "invalid_ohlc_rows": 0,
+      "start": "2026-04-25T00:00:00+00:00",
+      "end": "2026-06-24T08:00:00+00:00",
+      "ok": true
+    }
+  ],
+  "ok": true
+}

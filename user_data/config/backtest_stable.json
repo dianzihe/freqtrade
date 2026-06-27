@@ -1,0 +1,80 @@
+{
+    "max_open_trades": 3,
+    "stake_currency": "USDT",
+    "stake_amount": 100,
+    "tradable_balance_ratio": 0.99,
+    "fiat_display_currency": "CNY",
+    "dry_run": true,
+    "dry_run_wallet": 1000,
+    "trading_mode": "spot",
+    "margin_mode": "",
+    "position_adjustment_enable": true,
+    "timeframe": "1m",
+    "cancel_open_orders_on_exit": false,
+    "unfilledtimeout": {
+        "entry": 10,
+        "exit": 10,
+        "unit": "minutes"
+    },
+    "entry_pricing": {
+        "price_side": "same",
+        "use_order_book": false,
+        "order_book_top": 1,
+        "check_depth_of_market": {
+            "enabled": false,
+            "bids_to_ask_delta": 1
+        }
+    },
+    "exit_pricing": {
+        "price_side": "other",
+        "use_order_book": false,
+        "order_book_top": 1
+    },
+    "exchange": {
+        "name": "gate",
+        "key": "",
+        "secret": "",
+        "ccxt_config": {
+            "proxies": {
+                "http": "http://127.0.0.1:7890",
+                "https": "http://127.0.0.1:7890"
+            }
+        },
+        "ccxt_async_config": {
+            "aiohttp_proxy": "http://127.0.0.1:7890"
+        },
+        "pair_whitelist": [
+            "BTC/USDT",
+            "ETH/USDT",
+            "SOL/USDT",
+            "XRP/USDT"
+        ],
+        "pair_blacklist": []
+    },
+    "pairlists": [
+        {"method": "StaticPairList"}
+    ],
+    "datadir": "user_data/data/gate",
+    "telegram": {
+        "enabled": false,
+        "token": "",
+        "chat_id": ""
+    },
+    "api_server": {
+        "enabled": false,
+        "listen_ip_address": "127.0.0.1",
+        "listen_port": 8080,
+        "verbosity": "error",
+        "enable_openapi": false,
+        "jwt_secret_key": "freqtradeSecretKey_ChangeThisInProduction_123456",
+        "CORS_origins": [],
+        "username": "freqtrader",
+        "password": "freqtrader123"
+    },
+    "bot_name": "freqtrade",
+    "initial_state": "running",
+    "force_entry_enable": false,
+    "internals": {
+        "process_throttle_secs": 5
+    }
+}

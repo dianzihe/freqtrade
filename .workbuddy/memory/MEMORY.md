@@ -40,3 +40,12 @@ curl -s -u freqtrader:freqtrader123 http://127.0.0.1:8080/api/v1/status
 - 地址：`http://127.0.0.1:8080`
 - 账号：freqtrader / freqtrader123
 - 日志：`user_data/logs/freqtrade.log`
+
+## 策略文件命名
+
+- 策略文件已全部使用中文名（如 `缠论_中枢突破.py`、`趋势金字塔.py`），方便查看
+- 类名保持英文（如 `ChanlunCenterBreakoutStrategy`），配置文件和脚本通过类名引用策略
+- 3 个工具库文件也使用中文名：`缠论_核心模块.py`、`盘口_风险过滤器.py`、`Meme_马丁_基类.py`
+- 缠论系列策略使用 try/except 双路径导入核心模块（全路径 + 短路径）
+- Meme 系列策略使用短路径导入基类（`from Meme_马丁_基类 import ...`）
+- 鲁棒Meme系列使用全路径导入（`from user_data.strategies.xxx import ...`）

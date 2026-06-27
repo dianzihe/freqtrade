@@ -6,7 +6,8 @@ param(
 
     [string]$PairsFile = "user_data\pairs-gate-spot-200.json",
 
-    [string]$Timeframe = "1m",
+    [ValidateSet("1m", "5m", "15m", "1h")]
+    [string[]]$Timeframe = @("1m", "5m", "15m", "1h"),
 
     [string]$TradingMode = "spot",
 
@@ -41,7 +42,12 @@ $freqtradeArgs = @(
     "download-data",
     "-c", $ConfigPath,
     "--pairs-file", $PairsFile,
-    "--timeframes", $Timeframe,
+    "--timeframes"
+)
+
+$freqtradeArgs += $Timeframe
+
+$freqtradeArgs += @(
     "--days", "$Days",
     "--trading-mode", $TradingMode
 )
