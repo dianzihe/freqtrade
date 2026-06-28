@@ -6,6 +6,7 @@ import pandas as pd
 from scripts.gate_tick_recorder import (
     DailyParquetWriter,
     GateBookRecorderConfig,
+    L2SequenceGap,
     build_subscriptions,
     daily_path,
     flatten_l1_message,
@@ -110,7 +111,49 @@ def test_flatten_l2_message_has_compact_delta_columns() -> None:
         "ask_updates": '[["59401.1","0.12"]]',
         "bid_update_count": 2,
         "ask_update_count": 1,
+        "is_snapshot": False,
+        "is_empty": False,
     }
+
+
+def test_flatten_l2_message_marks_snapshot_and_empty_delta() -> None:
+    snapshot = flatten_l2_message(
+        {
+            "channel": "spot.obu",
+            "result": {
+                "t": 1782438627052,
+                "s": "ob.BTC_USDT.50",
+                "u": 38149401433,
+                "full": True,
+                "b": [["59386.4", "0.033713"]],
+                "a": [["59401.1", "0.12"]],
+            },
+            "time_ms": 1782438627053,
+            "event": "update",
+        },
+        pair="BTC_USDT",
+        received_at=datetime(2026, 6, 26, 15, 30, tzinfo=UTC),
+    )
+    empty_delta = flatten_l2_message(
+        {
+            "channel": "spot.obu",
+            "result": {
+                "t": 1782438628052,
+                "s": "ob.BTC_USDT.50",
+                "u": 38149401434,
+                "U": 38149401434,
+            },
+            "time_ms": 1782438628053,
+            "event": "update",
+        },
+        pair="BTC_USDT",
+        received_at=datetime(2026, 6, 26, 15, 30, tzinfo=UTC),
+    )
+
+    assert snapshot["is_snapshot"] is True
+    assert snapshot["is_empty"] is False
+    assert empty_delta["is_snapshot"] is False
+    assert empty_delta["is_empty"] is True
 
 
 def test_normalize_message_ignores_non_update_and_unknown_channels() -> None:
@@ -174,6 +217,54 @@ def test_daily_writer_appends_l1_and_l2_to_daily_files(tmp_path: Path) -> None:
         "ask_updates",
         "bid_update_count",
         "ask_update_count",
+        "is_snapshot",
+        "is_empty",
     ]
     assert len(l1) == 1
     assert len(l2) == 1
+    assert not bool(l2.loc[0, "is_snapshot"])
+    assert not bool(l2.loc[0, "is_empty"])
+
+
+def test_daily_writer_rejects_l2_sequence_gap(tmp_path: Path) -> None:
+    config = GateBookRecorderConfig(pair="BTC_USDT", output_dir=tmp_path, flush_rows=100)
+    writer = DailyParquetWriter(config)
+    received_at = datetime(2026, 6, 26, 15, 30, tzinfo=UTC)
+
+    writer.add(
+        {
+            "time_ms": 1782438627053,
+            "channel": "spot.obu",
+            "event": "update",
+            "result": {
+                "t": 1782438627052,
+                "u": 100,
+                "full": True,
+                "b": [["59386.4", "0.1"]],
+                "a": [["59386.5", "0.2"]],
+            },
+        },
+        received_at=received_at,
+    )
+
+    try:
+        writer.add(
+            {
+                "time_ms": 1782438628053,
+                "channel": "spot.obu",
+                "event": "update",
+                "result": {
+                    "t": 1782438628052,
+                    "U": 102,
+                    "u": 103,
+                    "b": [["59386.4", "0.3"]],
+                    "a": [],
+                },
+            },
+            received_at=received_at,
+        )
+    except L2SequenceGap as exc:
+        assert exc.expected_first_update_id == 101
+        assert exc.actual_first_update_id == 102
+    else:
+        raise AssertionError("Expected L2SequenceGap")

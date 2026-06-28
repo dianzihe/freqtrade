@@ -65,6 +65,7 @@ AVAILABLE_PAIRLISTS = [
     "AgeFilter",
     "DelistFilter",
     "FullTradesFilter",
+    "GateMemeVolatilityPairList",
     "OffsetFilter",
     "PairInformationFilter",
     "PerformanceFilter",

@@ -27,7 +27,7 @@ class TrendPyramidAntiMartingaleStrategy(IStrategy):
 
     can_short = False
     timeframe = "5m"
-    startup_candle_count = 160
+    startup_candle_count = 300
     process_only_new_candles = True
 
     position_adjustment_enable = True

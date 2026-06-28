@@ -6,5 +6,5 @@ $Dashboard = Join-Path $Root "scripts\meme_dryrun_dashboard.py"
 
 while ($true) {
     & $Python $Dashboard | Out-Null
-    Start-Sleep -Seconds 30
+    Start-Sleep -Seconds 60
 }

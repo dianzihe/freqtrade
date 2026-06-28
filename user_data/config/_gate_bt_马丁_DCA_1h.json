@@ -1,0 +1,122 @@
+{
+  "$schema": "https://schema.freqtrade.io/schema.json",
+  "max_open_trades": 4,
+  "stake_currency": "USDT",
+  "stake_amount": 50,
+  "tradable_balance_ratio": 0.99,
+  "fiat_display_currency": "CNY",
+  "dry_run": true,
+  "dry_run_wallet": 1000,
+  "trading_mode": "spot",
+  "margin_mode": "",
+  "timeframe": "1h",
+  "dataformat_ohlcv": "feather",
+  "strategy": "MemeMartingaleBaseStrategy",
+  "strategy_path": "F:\\source\\freqtrade\\user_data\\strategies",
+  "position_adjustment_enable": true,
+  "cancel_open_orders_on_exit": false,
+  "use_exit_signal": true,
+  "exit_profit_only": false,
+  "ignore_roi_if_entry_signal": false,
+  "unfilledtimeout": {
+    "entry": 10,
+    "exit": 10,
+    "unit": "minutes"
+  },
+  "entry_pricing": {
+    "price_side": "same",
+    "use_order_book": true,
+    "order_book_top": 1,
+    "check_depth_of_market": {
+      "enabled": false,
+      "bids_to_ask_delta": 1
+    }
+  },
+  "exit_pricing": {
+    "price_side": "same",
+    "use_order_book": true,
+    "order_book_top": 1
+  },
+  "order_types": {
+    "entry": "limit",
+    "exit": "limit",
+    "emergency_exit": "market",
+    "force_exit": "market",
+    "force_entry": "market",
+    "stoploss": "market",
+    "stoploss_on_exchange": false
+  },
+  "order_time_in_force": {
+    "entry": "GTC",
+    "exit": "GTC"
+  },
+  "exchange": {
+    "name": "gate",
+    "key": "",
+    "secret": "",
+    "ccxt_config": {
+      "proxies": {
+        "http": "http://127.0.0.1:7890",
+        "https": "http://127.0.0.1:7890"
+      }
+    },
+    "ccxt_async_config": {
+      "aiohttp_proxy": "http://127.0.0.1:7890"
+    },
+    "enable_ws": false,
+    "pair_whitelist": [
+      "BTC/USDT",
+      "ETH/USDT",
+      "SOL/USDT",
+      "XRP/USDT",
+      "LTC/USDT",
+      "HYPE/USDT",
+      "XCN/USDT",
+      "IP/USDT",
+      "BAS/USDT",
+      "PEAQ/USDT",
+      "TA/USDT",
+      "H/USDT",
+      "VELVET/USDT",
+      "BEAT/USDT",
+      "COAI/USDT",
+      "ALLO/USDT",
+      "DN/USDT",
+      "STG/USDT"
+    ],
+    "pair_blacklist": [
+      ".*3L/USDT",
+      ".*3S/USDT",
+      ".*5L/USDT",
+      ".*5S/USDT",
+      ".*/USDT:USDT"
+    ]
+  },
+  "pairlists": [
+    {
+      "method": "StaticPairList",
+      "allow_inactive": true
+    }
+  ],
+  "user_data_dir": "F:\\source\\freqtrade\\user_data",
+  "telegram": {
+    "enabled": false,
+    "token": "",
+    "chat_id": ""
+  },
+  "api_server": {
+    "enabled": false,
+    "listen_ip_address": "127.0.0.1",
+    "listen_port": 8082,
+    "verbosity": "error",
+    "enable_openapi": false,
+    "jwt_secret_key": "gate-backtest-batch-secret-key-min-32-chars",
+    "CORS_origins": [],
+    "username": "freqtrader",
+    "password": "backtest-disabled"
+  },
+  "bot_name": "gate-backtest-马丁_DCA-1h",
+  "internals": {
+    "process_throttle_secs": 5
+  }
+}

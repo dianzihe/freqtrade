@@ -44,7 +44,30 @@ L2_COLUMNS = [
     "ask_updates",
     "bid_update_count",
     "ask_update_count",
+    "is_snapshot",
+    "is_empty",
 ]
+
+
+class L2SequenceGap(RuntimeError):
+    def __init__(
+        self,
+        *,
+        pair: str,
+        expected_first_update_id: int,
+        actual_first_update_id: int,
+        previous_update_id: int,
+        update_id: int,
+    ) -> None:
+        self.pair = pair
+        self.expected_first_update_id = expected_first_update_id
+        self.actual_first_update_id = actual_first_update_id
+        self.previous_update_id = previous_update_id
+        self.update_id = update_id
+        super().__init__(
+            f"{pair} L2 sequence gap: expected U={expected_first_update_id} after u={previous_update_id}, "
+            f"got U={actual_first_update_id}, u={update_id}"
+        )
 
 
 @dataclass(frozen=True)
@@ -149,6 +172,7 @@ def flatten_l2_message(
     bids = result.get("b") or []
     asks = result.get("a") or []
     update_id = parse_int(result.get("u"))
+    is_snapshot = bool(result.get("full"))
 
     return {
         "exchange_time_ms": parse_int(result.get("t")) or parse_int(message.get("time_ms")),
@@ -160,6 +184,8 @@ def flatten_l2_message(
         "ask_updates": json_dumps(asks),
         "bid_update_count": len(bids),
         "ask_update_count": len(asks),
+        "is_snapshot": is_snapshot,
+        "is_empty": not is_snapshot and not bids and not asks,
     }
 
 
@@ -185,6 +211,7 @@ class DailyParquetWriter:
         self.run_id = f"{utcnow().strftime('%Y%m%dT%H%M%SZ')}-{os.getpid()}"
         self._buffers: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
         self._parts: dict[tuple[str, str], int] = defaultdict(int)
+        self._last_l2_update_id: int | None = None
         self._last_flush = time.monotonic()
 
     @property
@@ -198,12 +225,35 @@ class DailyParquetWriter:
             return
 
         dataset, row = normalized
+        if dataset == "l2":
+            self._validate_l2_sequence(row)
+
         date = received_at.astimezone(UTC).date().isoformat()
         key = (dataset, date)
         self._buffers[key].append(row)
 
         if len(self._buffers[key]) >= self.config.flush_rows:
             self.flush_key(key)
+
+    def _validate_l2_sequence(self, row: dict[str, Any]) -> None:
+        update_id = row.get("update_id")
+        first_update_id = row.get("first_update_id")
+        if not isinstance(update_id, int) or not isinstance(first_update_id, int):
+            return
+        if row.get("is_snapshot"):
+            self._last_l2_update_id = update_id
+            return
+        if self._last_l2_update_id is not None:
+            expected_first_update_id = self._last_l2_update_id + 1
+            if first_update_id != expected_first_update_id:
+                raise L2SequenceGap(
+                    pair=self.config.pair,
+                    expected_first_update_id=expected_first_update_id,
+                    actual_first_update_id=first_update_id,
+                    previous_update_id=self._last_l2_update_id,
+                    update_id=update_id,
+                )
+        self._last_l2_update_id = update_id
 
     def flush_due(self) -> None:
         if time.monotonic() - self._last_flush >= self.config.flush_seconds:
