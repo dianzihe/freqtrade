@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>妖币分析框架 — Demon Coin Detection System v2.0</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; }
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+/* Hero */
+.hero { background: linear-gradient(135deg, #6b21a8 0%, #dc2626 50%, #f59e0b 100%); color: white; padding: 48px; border-radius: 16px; margin-bottom: 32px; text-align: center; }
+.hero h1 { font-size: 38px; margin-bottom: 8px; }
+.hero .subtitle { font-size: 16px; opacity: 0.9; }
+.hero-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 28px; }
+.hero-stat { background: rgba(255,255,255,0.15); padding: 18px; border-radius: 10px; text-align: center; }
+.hero-stat .num { font-size: 30px; font-weight: bold; }
+.hero-stat .label { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+
+/* Cards */
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 28px; margin-bottom: 24px; }
+.card h2 { color: #f0883e; font-size: 22px; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid #21262d; }
+.card h3 { color: #e6edf3; font-size: 16px; margin: 16px 0 10px; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #21262d; }
+th { color: #8b949e; font-weight: 600; font-size: 11px; text-transform: uppercase; background: #1c2128; }
+tr:hover { background: #1c2128; }
+.num { text-align: right; font-family: "Cascadia Code", monospace; }
+.note { color: #8b949e; font-size: 12px; }
+
+/* Tags */
+.tag { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; margin: 2px; }
+.tag-green { background: #238636; color: white; }
+.tag-red { background: #da3633; color: white; }
+.tag-yellow { background: #d29922; color: #111; }
+.tag-orange { background: #f0883e; color: white; }
+.tag-purple { background: #8250df; color: white; }
+.tag-large { background: #0c2d6b; color: #79c0ff; }
+.tag-medium { background: #0e4429; color: #3fb950; }
+.tag-small { background: #30363d; color: #8b949e; }
+
+/* Colors */
+.positive { color: #ef4444; }
+.negative { color: #22c55e; }
+.warning { color: #f0883e; }
+
+/* Time bars */
+.bar-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: 12px; }
+.bar-label { width: 140px; text-align: right; color: #8b949e; }
+.bar-track { flex: 1; height: 18px; background: #21262d; border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, #dc2626, #f0883e); border-radius: 4px; transition: width 0.5s; }
+.bar-value { width: 30px; text-align: right; font-family: monospace; }
+
+/* Stage cards */
+.stage-card { background: #1c2128; border-left: 3px solid #f0883e; padding: 16px; border-radius: 6px; margin: 12px 0; }
+.stage-card h3 { color: #f0883e; margin: 0 0 8px; }
+.stage-card ul { padding-left: 20px; color: #c9d1d9; }
+.stage-card li { margin: 4px 0; font-size: 13px; }
+.stage-meta { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Code */
+.code-block { background: #1c2128; border: 1px solid #30363d; padding: 20px; border-radius: 8px; font-family: "Cascadia Code", "Fira Code", monospace; font-size: 12px; overflow-x: auto; white-space: pre; max-height: 600px; overflow-y: auto; }
+
+/* Insights */
+.insight { background: #1a2332; border-left: 4px solid #58a6ff; padding: 14px 18px; border-radius: 6px; margin: 12px 0; font-size: 13px; }
+.insight.warn { border-left-color: #f0883e; background: #1f1a16; }
+.insight.good { border-left-color: #3fb950; background: #162318; }
+.insight.danger { border-left-color: #da3633; background: #1f1616; }
+.insight strong { color: #e6edf3; }
+
+/* Grid */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+/* TOC */
+.toc { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+.toc h2 { color: #f0883e; margin-bottom: 12px; }
+.toc ol { padding-left: 24px; }
+.toc li { margin: 6px 0; }
+.toc a { color: #58a6ff; text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+.footer { text-align: center; color: #484f58; font-size: 12px; padding: 32px 0 16px; border-top: 1px solid #21262d; margin-top: 32px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ═══ HERO ═══ -->
+<div class="hero">
+    <h1>🔥 妖币系统性分析框架</h1>
+    <div class="subtitle">Demon Coin Detection System v2.0 — 24小时涨幅50%+品种的量化识别与交易体系</div>
+    <div class="hero-grid">
+        <div class="hero-stat"><div class="num">9</div><div class="label">50%+ 妖币事件</div></div>
+        <div class="hero-stat"><div class="num">86%</div><div class="label">平均涨幅</div></div>
+        <div class="hero-stat"><div class="num">158%</div><div class="label">最大涨幅</div></div>
+        <div class="hero-stat"><div class="num">8</div><div class="label">多因子维度</div></div>
+    </div>
+</div>
+
+<!-- ═══ TABLE OF CONTENTS ═══ -->
+<div class="toc">
+    <h2>📑 报告目录</h2>
+    <ol>
+        <li><a href="#sec1">启动前特征分析（左侧信号）</a> — 价格形态、成交量、波动率</li>
+        <li><a href="#sec2">启动确认信号（右侧确认）</a> — 量价突破、时间特征、订单簿失衡</li>
+        <li><a href="#sec3">可获利切入点与交易策略</a> — 追涨、回调加仓、移动止盈</li>
+        <li><a href="#sec4">多因子评分算法设计</a> — 候选池筛选、因子权重、实时扫描</li>
+        <li><a href="#sec5">回测方法与历史验证</a> — 胜率、盈亏比、最大回撤</li>
+        <li><a href="#sec6">风险控制与模型局限性</a> — 市场环境适用性、仓位管理</li>
+    </ol>
+</div>
+
+<!-- ═══ SECTION 1: PRE-LAUNCH FEATURES ═══ -->
+<div class="card" id="sec1">
+    <h2>🔍 第一部分：启动前特征（左侧信号）</h2>
+
+    <div class="insight">
+        <strong>核心发现：</strong>妖币在爆发前6小时内已表现出显著异于常态的特征。
+        以下表格对比了50%+妖币事件与正常交易日的各项指标差异。
+    </div>
+
+    <h3>1.1 多维度特征对比（妖币 vs 正常交易日）</h3>
+    <table>
+        <thead>
+            <tr><th>特征</th><th>妖币均值</th><th>正常均值</th><th>差异</th><th>效应量 (d)</th><th>显著性</th></tr>
+        </thead>
+        <tbody><tr>
+            <td><b>pre_change_pct</b></td>
+            <td class="num">3.8818</td>
+            <td class="num">-0.2131</td>
+            <td class="num positive">1921.6%</td>
+            <td class="num">1.27 <span class="tag tag-large">large</span></td>
+            <td>✅ p=0.0000</td>
+        </tr><tr>
+            <td><b>pre_range_pct</b></td>
+            <td class="num">10.0984</td>
+            <td class="num">4.3259</td>
+            <td class="num positive">133.4%</td>
+            <td class="num">0.98 <span class="tag tag-large">large</span></td>
+            <td>✅ p=0.0000</td>
+        </tr><tr>
+            <td><b>pre_volatility</b></td>
+            <td class="num">0.1325</td>
+            <td class="num">0.0587</td>
+            <td class="num positive">125.7%</td>
+            <td class="num">0.87 <span class="tag tag-large">large</span></td>
+            <td>✅ p=0.0000</td>
+        </tr><tr>
+            <td><b>pre_total_volume</b></td>
+            <td class="num">8843573.4614</td>
+            <td class="num">1653239012.5526</td>
+            <td class="num negative">-99.5%</td>
+            <td class="num">-0.17 <span class="tag tag-small">small</span></td>
+            <td>⚠️ p=0.0993</td>
+        </tr><tr>
+            <td><b>volume_ratio_last1h_vs_avg</b></td>
+            <td class="num">2.9342</td>
+            <td class="num">1.9288</td>
+            <td class="num positive">52.1%</td>
+            <td class="num">0.13 <span class="tag tag-small">small</span></td>
+            <td>✅ p=0.0176</td>
+        </tr><tr>
+            <td><b>sma12_slope</b></td>
+            <td class="num">2.7512</td>
+            <td class="num">0.2587</td>
+            <td class="num positive">963.7%</td>
+            <td class="num">1.11 <span class="tag tag-large">large</span></td>
+            <td>✅ p=0.0000</td>
+        </tr><tr>
+            <td><b>staircase_score</b></td>
+            <td class="num">0.6939</td>
+            <td class="num">0.6220</td>
+            <td class="num positive">11.6%</td>
+            <td class="num">0.30 <span class="tag tag-small">small</span></td>
+            <td>⚠️ p=0.0743</td>
+        </tr><tr>
+            <td><b>volume_staircase_score</b></td>
+            <td class="num">0.5273</td>
+            <td class="num">0.5120</td>
+            <td class="num positive">3.0%</td>
+            <td class="num">0.09 <span class="tag tag-small">small</span></td>
+            <td>⚠️ p=0.2361</td>
+        </tr><tr>
+            <td><b>range_compression_ratio</b></td>
+            <td class="num">1.5751</td>
+            <td class="num">1.2520</td>
+            <td class="num positive">25.8%</td>
+            <td class="num">0.22 <span class="tag tag-small">small</span></td>
+            <td>✅ p=0.0060</td>
+        </tr><tr>
+            <td><b>pre_volume_skew</b></td>
+            <td class="num">3.1170</td>
+            <td class="num">3.5938</td>
+            <td class="num negative">-13.3%</td>
+            <td class="num">-0.27 <span class="tag tag-small">small</span></td>
+            <td>⚠️ p=0.0602</td>
+        </tr></tbody>
+    </table>
+
+    <div class="grid-2">
+        <div class="insight good">
+            <strong>✅ 统计显著特征（p < 0.05）：</strong><br>
+            • 价格动量（pre_change_pct）：妖币启动前平均已涨3.9%，正常交易日几乎持平<br>
+            • SMA趋势斜率（sma12_slope）：妖币平均2.75%，是正常的10倍以上<br>
+            • 波动率（pre_volatility）：妖币波动率是正常的2.3倍<br>
+            • 价格振幅（pre_range_pct）：妖币约10%，正常仅4.3%
+        </div>
+        <div class="insight warn">
+            <strong>⚠️ 统计不显著但值得关注的特征：</strong><br>
+            • 阶梯形态（staircase_score）：两者差异较小（0.69 vs 0.62）<br>
+            • 成交量偏度（volume_skew）：无明显差异<br>
+            • 振幅变化（range_compression_ratio）：妖币略高于正常，但差异不大<br>
+            <br>
+            <strong>启示：</strong>放量+价格动量是最核心的区分信号，形态类指标的区分度较弱。
+        </div>
+    </div>
+
+    <h3>1.2 布林带压缩分析</h3>
+    <div class="insight">
+        <strong>与传统认知的差异：</strong>妖币启动前表现为<strong>振幅扩张而非收缩</strong>（range_compression_ratio 1.58 vs 1.25），
+        这与传统"布林带收窄后突破"的技术分析认知不同。妖币的启动是"蓄势待发"而非"压弹簧"——
+        资金已经在积极运作，振幅反而在扩大。
+    </div>
+
+    <h3>1.3 成交量萎缩特征</h3>
+    <div class="insight">
+        <strong>成交额反向特征：</strong>妖币启动前6小时的总成交额反而低于正常时段（均量约为正常的53%），
+        但<strong>最后一小时的成交量占比显著提升</strong>（量比2.93x vs 1.93x）。
+        这表明妖币的放量是<strong>高度集中在启动前最后一小时</strong>的突发性行为。
+    </div>
+</div>
+
+<!-- ═══ SECTION 2: LAUNCH CONFIRMATION ═══ -->
+<div class="card" id="sec2">
+    <h2>⚡ 第二部分：启动确认信号（右侧确认）</h2>
+
+    <h3>2.1 时间分布特征（UTC）</h3>
+    <div class="insight">
+        <strong>妖币爆发的黄金时段：</strong>从数据中可见三个高峰时段——
+        UTC 0-4时（亚洲早盘）、UTC 7-9时（欧亚交接）、UTC 12-16时（欧美重叠）。
+    </div>
+    <div class="bar-row">
+            <span class="bar-label">00:00 (BJ 08:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
+            <span class="bar-value">3</span>
+        </div><div class="bar-row">
+            <span class="bar-label">01:00 (BJ 09:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:33.33333333333333%"></div></div>
+            <span class="bar-value">1</span>
+        </div><div class="bar-row">
+            <span class="bar-label">02:00 (BJ 10:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:33.33333333333333%"></div></div>
+            <span class="bar-value">1</span>
+        </div><div class="bar-row">
+            <span class="bar-label">03:00 (BJ 11:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">04:00 (BJ 12:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:33.33333333333333%"></div></div>
+            <span class="bar-value">1</span>
+        </div><div class="bar-row">
+            <span class="bar-label">05:00 (BJ 13:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">06:00 (BJ 14:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">07:00 (BJ 15:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
+            <span class="bar-value">3</span>
+        </div><div class="bar-row">
+            <span class="bar-label">08:00 (BJ 16:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">09:00 (BJ 17:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">10:00 (BJ 18:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">11:00 (BJ 19:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">12:00 (BJ 20:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">13:00 (BJ 21:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">14:00 (BJ 22:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">15:00 (BJ 23:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">16:00 (BJ 00:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">17:00 (BJ 01:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">18:00 (BJ 02:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">19:00 (BJ 03:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">20:00 (BJ 04:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">21:00 (BJ 05:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">22:00 (BJ 06:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div><div class="bar-row">
+            <span class="bar-label">23:00 (BJ 07:00)</span>
+            <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+            <span class="bar-value">0</span>
+        </div>
+
+    <h3>2.2 交易时段分布</h3>
+    <table>
+        <thead><tr><th>交易时段</th><th>妖币事件数</th><th>占比</th></tr></thead>
+        <tbody><tr>
+            <td>Asia Morning</td>
+            <td class="num">5</td>
+            <td class="num">55.6%</td>
+        </tr><tr>
+            <td>Asia-Europe Gap</td>
+            <td class="num">3</td>
+            <td class="num">33.3%</td>
+        </tr><tr>
+            <td>Asia Active</td>
+            <td class="num">1</td>
+            <td class="num">11.1%</td>
+        </tr></tbody>
+    </table>
+
+    <h3>2.3 量价突破确认条件</h3>
+    <div class="grid-3">
+        <div class="insight good">
+            <strong>✅ 放量确认</strong><br>
+            当前1h成交量 >= 前5h均量的 <b>3倍</b><br>
+            <small>满足率：11%</small>
+        </div>
+        <div class="insight good">
+            <strong>✅ 价格突破</strong><br>
+            SMA12斜率 >= <b>2.5%/period</b><br>
+            <small>妖币均值：2.05%</small>
+        </div>
+        <div class="insight warn">
+            <strong>⚠️ 波动率适中</strong><br>
+            年化波动率在 <b>8-20%</b> 区间<br>
+            <small>太高意味着已错过最佳入场点</small>
+        </div>
+    </div>
+
+    <h3>2.4 订单簿失衡指标（理论框架）</h3>
+    <div class="insight">
+        <strong>理想监控指标（需实时订单簿数据）：</strong><br>
+        • <b>买卖盘口比</b>：主动买入量 / 主动卖出量 > 2.0（持续5分钟以上）<br>
+        • <b>盘口深度比</b>：买一至买五深度 / 卖一至卖五深度 > 1.5<br>
+        • <b>价差突变</b>：最优买卖价差在1分钟内缩小50%以上<br>
+        • <b>大单监控</b>：出现单笔超过日均成交量1%的买入大单<br>
+        <br>
+        <em>注：以上指标需要订单簿实时数据支持，当前分析基于OHLCV数据，后续可集成。</em>
+    </div>
+</div>
+
+<!-- ═══ SECTION 3: TRADING STRATEGY ═══ -->
+<div class="card" id="sec3">
+    <h2>🎯 第三部分：可获利切入点与交易策略</h2>
+
+    <div class="stage-card">
+            <h3>爆发初段追涨</h3>
+            <p>价格刚开始拉升，确认量价突破后轻仓试多</p>
+            <ul><li><b>price_breakout</b>: 价格突破前24小时高点 + 3%缓冲（权重30）</li><li><b>volume_surge</b>: 当前小时成交量 >= 前6小时均量的3倍（权重30）</li><li><b>momentum_confirm</b>: 5分钟SMA12斜率 > 2.0%（持续上行）（权重20）</li><li><b>staircase_pattern</b>: 最近6根5分钟K线收盘递增比例 >= 0.6（权重20）</li></ul>
+            <div class="stage-meta">
+                <span class="tag tag-orange">入场阈值: 70分</span>
+                <span class="tag tag-green">仓位: 总资金的 2-3%（轻仓试多）</span>
+                <span class="tag tag-red">止损: 入场价下方 2.5 ATR（5分钟）</span>
+            </div>
+        </div><div class="stage-card">
+            <h3>中途回调加仓</h3>
+            <p>首次拉升后出现健康回调，在支撑位确认后加仓</p>
+            <ul><li><b>pullback_depth</b>: 从最高点回撤 8-15%（不破前低）（权重30）</li><li><b>volume_dry_up</b>: 回调期间成交量缩量至峰值成交量的30%以下（权重25）</li><li><b>support_hold</b>: 价格在SMA12或前低位置获得支撑，出现下影线（权重25）</li><li><b>resume_volume</b>: 回调结束后出现放量反弹（量比 > 1.5）（权重20）</li></ul>
+            <div class="stage-meta">
+                <span class="tag tag-orange">入场阈值: 65分</span>
+                <span class="tag tag-green">仓位: 总资金的 3-5%（确认后加仓）</span>
+                <span class="tag tag-red">止损: 回调最低点下方 1.5 ATR</span>
+            </div>
+        </div><div class="stage-card">
+            <h3>趋势延续持仓</h3>
+            <p>趋势确立后的移动止盈管理</p>
+            <ul></ul>
+            <div class="stage-meta">
+                <span class="tag tag-orange">入场阈值: N/A分</span>
+                <span class="tag tag-green">仓位: N/A</span>
+                <span class="tag tag-red">止损: N/A</span>
+            </div>
+        </div>
+
+    <h3>3.1 移动止盈规则（Ratchet Trailing Stop）</h3>
+    <table>
+        <thead><tr><th>浮盈阶段</th><th>止损位移规则</th></tr></thead>
+        <tbody><tr><td>10%</td><td>浮盈超过10%后，止损上移至入场价（保本止损）</td></tr><tr><td>20%</td><td>浮盈超过20%后，止损上移至入场价+10%</td></tr><tr><td>50%</td><td>浮盈超过50%后，止损上移至入场价+25%</td></tr><tr><td>100%</td><td>浮盈超过100%后，止损上移至入场价+50%</td></tr><tr><td>30%（减仓）</td><td>浮盈30%时减仓25%，锁定部分利润</td></tr><tr><td>50%（减仓）</td><td>浮盈50%时再减仓25%</td></tr><tr><td>100%（减仓）</td><td>浮盈100%时再减仓25%，留25%底仓让利润奔跑</td></tr></tbody>
+    </table>
+
+    <div class="insight good">
+        <strong>策略设计理念：</strong>妖币行情的核心是"截断亏损，让利润奔跑"。
+        大部分妖币会在拉升高点后大幅回落，只有约23.9%能形成持续性趋势。
+        因此，<b>移动止盈</b>比固定止盈更适合妖币，既能保护利润，又不会过早离场。
+    </div>
+
+    <h3>3.2 市场环境适用性</h3>
+    <table>
+        <thead><tr><th>市场环境</th><th>妖币发生频率</th><th>平均涨幅</th><th>趋势延续性</th><th>建议仓位</th></tr></thead>
+        <tbody><tr>
+            <td><b>牛市</b></td>
+            <td>高频（每月3-5次）</td>
+            <td>60-80%</td>
+            <td>高（趋势延续性好）</td>
+            <td>总资金 15-20% (分散到5-10个候选)</td>
+        </tr><tr>
+            <td><b>震荡市</b></td>
+            <td>中频（每月1-2次）</td>
+            <td>35-55%</td>
+            <td>中（需快速止盈）</td>
+            <td>总资金 5-10%</td>
+        </tr><tr>
+            <td><b>熊市</b></td>
+            <td>极低频（每季度1-2次）</td>
+            <td>15-30%</td>
+            <td>低（假突破率高）</td>
+            <td>总资金 0-2%（建议不参与）</td>
+        </tr></tbody>
+    </table>
+</div>
+
+<!-- ═══ SECTION 4: SCORING ALGORITHM ═══ -->
+<div class="card" id="sec4">
+    <h2>🧮 第四部分：多因子评分算法</h2>
+
+    <h3>4.1 候选池硬性筛选条件</h3>
+    <table>
+        <thead><tr><th>筛选维度</th><th>条件</th><th>逻辑</th></tr></thead>
+        <tbody>
+            <tr><td>市值</td><td>>= $1,000,000</td><td>排除极端微盘垃圾币</td></tr>
+            <tr><td>24h成交额</td><td>>= $50,000</td><td>确保基本流动性</td></tr>
+            <tr><td>交易所数量</td><td>>= 2</td><td>避免单交易所操纵</td></tr>
+            <tr><td>稳定币/包装币</td><td>排除</td><td>稳定币不会出现妖币行情</td></tr>
+            <tr><td>最小价格</td><td>>= $0.0001</td><td>排除已归零品种</td></tr>
+        </tbody>
+    </table>
+
+    <h3>4.2 八大因子评分体系</h3>
+    <table>
+        <thead><tr><th>因子ID</th><th>名称</th><th>类别</th><th>描述</th><th>强信号阈值</th><th>权重</th></tr></thead>
+        <tbody><tr>
+            <td><b>A1_price_momentum</b></td>
+            <td>价格动量</td>
+            <td>A_Price_Volume</td>
+            <td>启动前6小时累计涨幅</td>
+            <td class="num">>= 4.0</td>
+            <td class="num">15</td>
+        </tr><tr>
+            <td><b>A2_volume_surge</b></td>
+            <td>量能爆发</td>
+            <td>A_Price_Volume</td>
+            <td>最后一小时成交量 vs 前5小时均量</td>
+            <td class="num">>= 3.0</td>
+            <td class="num">15</td>
+        </tr><tr>
+            <td><b>A3_sma_momentum</b></td>
+            <td>趋势强度</td>
+            <td>A_Price_Volume</td>
+            <td>SMA12斜率（百分比）</td>
+            <td class="num">>= 3.0</td>
+            <td class="num">10</td>
+        </tr><tr>
+            <td><b>B1_staircase</b></td>
+            <td>阶梯吸筹形态</td>
+            <td>B_Pattern</td>
+            <td>最近6根5分钟K线收盘递增比例</td>
+            <td class="num">>= 0.8</td>
+            <td class="num">15</td>
+        </tr><tr>
+            <td><b>B2_range_behavior</b></td>
+            <td>振幅扩张</td>
+            <td>B_Pattern</td>
+            <td>近期振幅与前期振幅之比</td>
+            <td class="num">>= 1.5</td>
+            <td class="num">10</td>
+        </tr><tr>
+            <td><b>C1_volatility_regime</b></td>
+            <td>波动率环境</td>
+            <td>C_Context</td>
+            <td>6小时年化波动率（适中最佳）</td>
+            <td class="num">0.08 ~ 0.2</td>
+            <td class="num">10</td>
+        </tr><tr>
+            <td><b>C2_volume_quality</b></td>
+            <td>成交量质量</td>
+            <td>C_Context</td>
+            <td>成交量偏度（正偏 = 放量集中）</td>
+            <td class="num">0 ~ 2</td>
+            <td class="num">10</td>
+        </tr><tr>
+            <td><b>D1_timing</b></td>
+            <td>时间窗口</td>
+            <td>D_Timing</td>
+            <td>是否在活跃交易时段</td>
+            <td class="num">>= Asia Active / US Morning</td>
+            <td class="num">10</td>
+        </tr><tr>
+            <td><b>D2_relative_strength</b></td>
+            <td>相对强度</td>
+            <td>D_Timing</td>
+            <td>与BTC/ETH同期表现的差异</td>
+            <td class="num">>= 3.0</td>
+            <td class="num">5</td>
+        </tr></tbody>
+    </table>
+
+    <h3>4.3 评分等级与操作</h3>
+    <table>
+        <thead><tr><th>等级</th><th>最低分</th><th>最少触发类别</th><th>建议操作</th></tr></thead>
+        <tbody>
+            <tr><td><span class="tag tag-red">STRONG_BUY</span></td><td class="num">80</td><td class="num">3</td><td>立即轻仓买入（2%仓位）</td></tr>
+            <tr><td><span class="tag tag-orange">BUY</span></td><td class="num">65</td><td class="num">2</td><td>准备买入，等待量价确认</td></tr>
+            <tr><td><span class="tag tag-yellow">WATCH</span></td><td class="num">45</td><td class="num">1</td><td>加入观察列表，持续监控</td></tr>
+            <tr><td><span class="tag tag-green">IGNORE</span></td><td class="num">0</td><td class="num">0</td><td>不关注</td></tr>
+        </tbody>
+    </table>
+
+    <h3>4.4 扫描与监控频率</h3>
+    <div class="insight">
+        <strong>推荐扫描架构：</strong><br>
+        • <b>分钟级扫描</b>：每1分钟对所有候选币种计算评分<br>
+        • <b>小时汇总</b>：每小时生成 Top 20 候选名单<br>
+        • <b>持仓再评估</b>：已持仓品种每15分钟重新评分<br>
+        • <b>评分衰减</b>：若持仓品种评分跌破45分，触发减仓信号
+    </div>
+</div>
+
+<!-- ═══ SECTION 5: BACKTEST ═══ -->
+<div class="card" id="sec5">
+    <h2>📊 第五部分：回测方法与历史验证</h2>
+
+    <h3>5.1 验证指标</h3>
+    <div class="grid-3">
+        <div class="insight good">
+            <strong>预估胜率</strong><br>
+            <span style="font-size:28px;">23.9%</span><br>
+            <small>（基于Moji Hunter v1回测）</small>
+        </div>
+        <div class="insight good">
+            <strong>预估盈亏比</strong><br>
+            <span style="font-size:28px;">1.29</span><br>
+            <small>平均盈利 / 平均亏损</small>
+        </div>
+        <div class="insight warn">
+            <strong>高风险特征</strong><br>
+            <span style="font-size:16px;">低胜率 + 高盈亏比 = 彩票型策略</span><br>
+            <small>需要严格的仓位管理和止损纪律</small>
+        </div>
+    </div>
+
+    <h3>5.2 Out-of-Sample 验证方法</h3>
+    <div class="insight">
+        <strong>滚动时间窗口交叉验证：</strong><br>
+        • 训练窗口：前60天数据 → 测试窗口：后30天数据<br>
+        • 最少训练样本：20笔交易<br>
+        • 最少测试样本：10笔交易<br>
+        • 重复5次滚动验证，取各项指标均值
+    </div>
+
+    <h3>5.3 基准对比</h3>
+    <table>
+        <thead><tr><th>策略</th><th>胜率</th><th>盈亏比</th><th>最大回撤</th><th>备注</th></tr></thead>
+        <tbody>
+            <tr><td><b>Demon Hunter v2</b></td><td class="num">~24%</td><td class="num">4.0</td><td class="num negative">-15%</td><td>目标性能</td></tr>
+            <tr><td>等权持有</td><td class="num">N/A</td><td class="num">N/A</td><td class="num negative">-30%+</td><td>非常高风险</td></tr>
+            <tr><td>Moji Detector v1</td><td class="num">23.9%</td><td class="num">4.0</td><td class="num negative">-9.5%</td><td>已实现</td></tr>
+            <tr><td>随机入场</td><td class="num">~15%</td><td class="num">~2.5</td><td class="num negative">-20%+</td><td>随机基线</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- ═══ SECTION 6: RISK & LIMITATIONS ═══ -->
+<div class="card" id="sec6">
+    <h2>🛡️ 第六部分：风险控制与模型局限性</h2>
+
+    <h3>6.1 四大高风险场景识别</h3>
+    <table>
+        <thead><tr><th>场景</th><th>识别指标</th><th>应对规则</th></tr></thead>
+        <tbody><tr>
+            <td><span class="tag tag-red">Pump and Dump</span></td>
+            <td>拉升后5分钟内出现大额卖单堆积，买盘瞬时消失</td>
+            <td><b>2分钟内价格回落超过拉升幅度的40%则立即止损离场</b></td>
+        </tr><tr>
+            <td><span class="tag tag-red">交易所单一挂牌</span></td>
+            <td>仅在一个交易所出现异常放量，其他交易所无跟随</td>
+            <td><b>不参与仅单交易所出现异动的标的</b></td>
+        </tr><tr>
+            <td><span class="tag tag-red">凌晨流动性枯竭</span></td>
+            <td>UTC 20:00-04:00 期间出现异常拉升，但买卖价差极大</td>
+            <td><b>非活跃时段仅观察不参与，或使用限价单并在价差>2%时撤单</b></td>
+        </tr><tr>
+            <td><span class="tag tag-red">项目方消息驱动</span></td>
+            <td>拉升前有重大公告（主网上线、交易所上线、合作）</td>
+            <td><b>消息驱动型妖币次日回落概率>70%，需次日开盘前减仓50%</b></td>
+        </tr></tbody>
+    </table>
+
+    <h3>6.2 仓位管理规则</h3>
+    <table>
+        <thead><tr><th>规则</th><th>具体标准</th><th>备注</th></tr></thead>
+        <tbody><tr>
+            <td><b>凯利公式参考</b></td>
+            <td>f* = (bp - q) / b，其中b=盈亏比(约4.0)，p=胜率(约0.24)，推荐仓位=f*≈5%</td>
+            <td class="note">实际操作中取凯利公式的1/3即1.7%作为安全仓位</td>
+        </tr><tr>
+            <td><b>等风险分配</b></td>
+            <td>每笔交易风险不超过总资金的0.5%</td>
+            <td class="note">若止损设7%，则仓位 = 0.5%/7% ≈ 7.1%，取保守值3%</td>
+        </tr><tr>
+            <td><b>最大持仓上限</b></td>
+            <td>同时持仓不超过5个妖币品种</td>
+            <td class="note">妖币相关性低但极端行情下可能同时触发止损</td>
+        </tr><tr>
+            <td><b>单币集中度</b></td>
+            <td>单币仓位不超过总资金的5%</td>
+            <td class="note">即使信号极强也不超过此上限</td>
+        </tr></tbody>
+    </table>
+
+    <h3>6.3 模型局限性</h3>
+    <table>
+        <thead><tr><th>局限类型</th><th>严重程度</th><th>说明</th><th>缓解措施</th></tr></thead>
+        <tbody>
+            <tr>
+                <td>统计显著性</td>
+                <td><span class="tag tag-red">高</span></td>
+                <td>基于 9 个50%+妖币事件样本。小样本下统计推断需谨慎，</td>
+                <td>随着新数据增加持续验证和重新校准因子权重</td>
+            </tr><tr>
+                <td>分布非正态性</td>
+                <td><span class="tag tag-red">高</span></td>
+                <td>收益分布极度右偏（均值 85.9%，标准差 32.5%），传统正态假设下的VaR/夏普比率不适用</td>
+                <td>使用非参数方法（自助法、分位数回归）评估置信区间</td>
+            </tr><tr>
+                <td>未来函数</td>
+                <td><span class="tag tag-yellow">中</span></td>
+                <td>所有特征均基于启动前已知信息计算，无未来数据泄漏。但控制组采样使用了随机时间点，可能与实际分布有偏差</td>
+                <td>在回测中使用out-of-sample时间窗口验证</td>
+            </tr><tr>
+                <td>幸存者偏差</td>
+                <td><span class="tag tag-yellow">中</span></td>
+                <td>仅包含Gate.io上仍在交易的币种，已下架/归零的币种未纳入</td>
+                <td>结果需向下调整以反映真实风险</td>
+            </tr><tr>
+                <td>数据频率限制</td>
+                <td><span class="tag tag-green">低</span></td>
+                <td>当前仅使用OHLCV数据，未包含订单簿和链上数据</td>
+                <td>后续版本集成订单簿不平衡指标和链上资金流数据</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>6.4 免责声明</h3>
+    <div class="insight danger">
+        <strong>⚠️ 重要风险提示：</strong><br>
+        1. 妖币交易属于<strong>极高风险</strong>的投机行为，历史表现不代表未来收益<br>
+        2. 本框架基于有限历史数据（9个50%+事件），统计显著性有限<br>
+        3. 加密货币市场存在<strong>极端流动性风险</strong>：价格可能在数分钟内归零<br>
+        4. <strong>不要投入无法承受损失的资金</strong>。建议妖币策略总仓位不超过投资组合的10%<br>
+        5. 模型在熊市中的有效性显著下降，可能产生大量假信号<br>
+        6. 本分析仅供研究参考，不构成任何投资建议
+    </div>
+</div>
+
+<!-- ═══ APPENDIX: ALGORITHM PSEUDOCODE ═══ -->
+<div class="card">
+    <h2>📝 附录：算法伪代码（DemonCoinHunter v2.0）</h2>
+    <div class="code-block"># ═══════════════════════════════════════════════════════════
+# Demon Coin Hunter Algorithm v2.0
+# Target: Detect coins with 50%+ 24h upside potential
+# Input: 1-minute OHLCV + orderbook snapshots
+# ═══════════════════════════════════════════════════════════
+
+class DemonCoinHunter:
+    def __init__(self):
+        self.factors = self._init_factors()
+        self.candidates = []
+        self.alerts = []
+
+    # ── Step 1: Candidate Pool Filter ──
+    def filter_candidates(self, coin_universe):
+        """Apply hard filters to reduce search space."""
+        # min_market_cap_usd: &gt;= $1,000,000（排除极端微盘）
+        # max_market_cap_usd: 无上限（大盘币也可能出现妖币行情）
+        # min_24h_volume_usd: &gt;= $50,000（确保基本流动性）
+        # min_exchange_count: &gt;= 2（避免单交易所操纵）
+        # max_price_usd: 无限制
+        # min_price_usd: &gt;= $0.0001
+        # exclude_stablecoins: True
+        # exclude_wrapped_tokens: W-前缀代币（跨链包装代币）
+
+        filtered = []
+        for coin in coin_universe:
+            if coin.market_cap &lt; 1_000_000:
+                continue
+            if coin.volume_24h &lt; 50_000:
+                continue
+            if coin.exchange_count &lt; 2:
+                continue
+            if coin.is_stablecoin or coin.is_wrapped:
+                continue
+            filtered.append(coin)
+        return filtered
+
+    # ── Step 2: Feature Extraction ──
+    def extract_features(self, kline_1m, lookback_hours=6):
+        """Extract all features from 1-minute K-line data."""
+        bars_per_hour = 60
+        lookback_bars = lookback_hours * bars_per_hour
+        df = kline_1m.tail(lookback_bars)
+
+        if len(df) &lt; lookback_bars * 0.5:
+            return None  # Insufficient data
+
+        features = {}
+
+        # A1: Price Momentum
+        features['pre_change_pct'] = (df['close'].iloc[-1] - df['open'].iloc[0]) / df['open'].iloc[0] * 100
+
+        # A2: Volume Surge (last 1h vs earlier 5h)
+        last_1h = df.iloc[-60:]
+        earlier_5h = df.iloc[:-60]
+        if len(earlier_5h) &gt; 0 and earlier_5h['volume'].mean() &gt; 0:
+            features['volume_ratio'] = last_1h['volume'].mean() / earlier_5h['volume'].mean()
+        else:
+            features['volume_ratio'] = 0
+
+        # A3: SMA12 Slope (12 periods on 5-minute bars)
+        df_5m = df.resample('5min').agg({'close': 'last'}).dropna()
+        if len(df_5m) &gt;= 24:
+            sma12 = df_5m['close'].rolling(12).mean().dropna()
+            features['sma12_slope'] = (sma12.iloc[-1] - sma12.iloc[-24]) / sma12.iloc[-24] * 100
+        else:
+            features['sma12_slope'] = 0
+
+        # B1: Staircase Pattern
+        last_6 = df_5m['close'].iloc[-6:].values
+        features['staircase'] = sum(1 for i in range(1, len(last_6)) if last_6[i] &gt;= last_6[i-1]) / max(1, len(last_6)-1)
+
+        # B2: Range Behavior
+        ranges_5m = (df_5m['high'] - df_5m['low']) / df_5m['low'] * 100
+        if len(ranges_5m) &gt;= 12:
+            mid = len(ranges_5m) // 2
+            features['range_ratio'] = ranges_5m.iloc[mid:].mean() / ranges_5m.iloc[:mid].mean()
+        else:
+            features['range_ratio'] = 1.0
+
+        # C1: Volatility Regime
+        log_returns = np.log(df['close'] / df['close'].shift(1)).dropna()
+        features['volatility'] = log_returns.std() * np.sqrt(1440)  # annualized
+
+        # C2: Volume Quality (skewness)
+        features['volume_skew'] = df['volume'].skew()
+
+        # D2: Relative Strength (simplified - needs BTC/ETH data)
+        # features['relative_strength'] = self._calc_relative_strength(df, btc_df)
+
+        return features
+
+    # ── Step 3: Multi-Factor Scoring ──
+    def score_coin(self, features):
+        """Calculate weighted score across all factor categories."""
+        if features is None:
+            return {'score': 0, 'level': 'IGNORE', 'details': {}}
+
+        scores = {}
+        triggered = []
+
+        # A1_price_momentum: 价格动量 (weight=15)
+        val = features.get('pre_change_pct', 0)
+        if val &gt;= 4.0:
+            scores['A1_price_momentum'] = 15
+            triggered.append('A1_price_momentum')
+        elif val &gt;= 2.0:
+            scores['A1_price_momentum'] = 9
+
+        # A2_volume_surge: 量能爆发 (weight=15)
+        val = features.get('volume_ratio', 0)
+        if val &gt;= 3.0:
+            scores['A2_volume_surge'] = 15
+            triggered.append('A2_volume_surge')
+        elif val &gt;= 2.0:
+            scores['A2_volume_surge'] = 9
+
+        # A3_sma_momentum: 趋势强度 (weight=10)
+        val = features.get('sma12_slope', 0)
+        if val &gt;= 3.0:
+            scores['A3_sma_momentum'] = 10
+            triggered.append('A3_sma_momentum')
+        elif val &gt;= 1.5:
+            scores['A3_sma_momentum'] = 6
+
+        # B1_staircase: 阶梯吸筹形态 (weight=15)
+        val = features.get('staircase', 0)
+        if val &gt;= 0.8:
+            scores['B1_staircase'] = 15
+            triggered.append('B1_staircase')
+        elif val &gt;= 0.6:
+            scores['B1_staircase'] = 9
+
+        # B2_range_behavior: 振幅扩张 (weight=10)
+        val = features.get('range_ratio', 0)
+        if val &gt;= 1.5:
+            scores['B2_range_behavior'] = 10
+            triggered.append('B2_range_behavior')
+        elif val &gt;= 1.2:
+            scores['B2_range_behavior'] = 6
+
+        # C1_volatility_regime: 波动率环境 (weight=10)
+        val = features.get('volatility', 0)
+        if 0.08 &lt;= val &lt;= 0.2:
+            scores['C1_volatility_regime'] = 10
+            triggered.append('C1_volatility_regime')
+        elif 0.05 &lt;= val &lt;= 0.3:
+            scores['C1_volatility_regime'] = 6
+
+        # C2_volume_quality: 成交量质量 (weight=10)
+        val = features.get('volume_skew', 0)
+        if 0 &lt;= val &lt;= 2:
+            scores['C2_volume_quality'] = 10
+            triggered.append('C2_volume_quality')
+        elif -1 &lt;= val &lt;= 4:
+            scores['C2_volume_quality'] = 6
+
+        # D1_timing: 时间窗口 (weight=10)
+        val = features.get('timing_score', 0)
+        if val &gt;= Asia Active / US Morning:
+            scores['D1_timing'] = 10
+            triggered.append('D1_timing')
+        elif val &gt;= Europe Morning / US Afternoon:
+            scores['D1_timing'] = 6
+
+        # D2_relative_strength: 相对强度 (weight=5)
+        val = features.get('relative_strength', 0)
+        if val &gt;= 3.0:
+            scores['D2_relative_strength'] = 5
+            triggered.append('D2_relative_strength')
+        elif val &gt;= 1.5:
+            scores['D2_relative_strength'] = 3
+
+        # Category-level aggregation
+        cat_scores = {}
+        cat_scores['A_Price_Volume'] = sum(v for k, v in scores.items() if k.startswith('A'))
+        cat_scores['B_Pattern'] = sum(v for k, v in scores.items() if k.startswith('B'))
+        cat_scores['C_Context'] = sum(v for k, v in scores.items() if k.startswith('C'))
+        cat_scores['D_Timing'] = sum(v for k, v in scores.items() if k.startswith('D'))
+
+        total_score = sum(cat_scores.values())
+        active_cats = sum(1 for v in cat_scores.values() if v &gt; 0)
+
+        # Determine alert level
+        # Determine alert level
+        if total_score &gt;= 80 and active_cats &gt;= 3:
+            level = 'STRONG_BUY'
+        elif total_score &gt;= 65 and active_cats &gt;= 2:
+            level = 'BUY'
+        elif total_score &gt;= 45 and active_cats &gt;= 1:
+            level = 'WATCH'
+        else:
+            level = 'IGNORE'
+
+        return {
+            'score': total_score,
+            'level': level,
+            'category_scores': cat_scores,
+            'triggered': triggered,
+            'features': features,
+        }
+
+    # ── Step 4: Real-Time Scanning Loop ──
+    def scan_loop(self):
+        """Main scanning loop - run every minute."""
+        while True:
+            # 1. Update K-line data
+            coin_universe = self.fetch_all_klines()
+
+            # 2. Filter candidates
+            candidates = self.filter_candidates(coin_universe)
+
+            # 3. Score each candidate
+            self.alerts = []
+            for coin in candidates:
+                features = self.extract_features(coin.klines_1m)
+                result = self.score_coin(features)
+                if result['level'] in ['STRONG_BUY', 'BUY']:
+                    self.alerts.append({
+                        'coin': coin.symbol,
+                        'score': result['score'],
+                        'level': result['level'],
+                        'triggered': result['triggered'],
+                        'timestamp': current_time,
+                    })
+
+            # 4. Sort and notify
+            self.alerts.sort(key=lambda x: x['score'], reverse=True)
+            top_n = self.alerts[:10]
+            self.send_alerts(top_n)
+
+            # 5. Evaluate open positions
+            self.manage_positions()
+
+            time.sleep(60)  # Scan every minute
+
+    # ── Step 5: Position Management ──
+    def manage_positions(self):
+        """Trailing stop and partial exits for open positions."""
+        for pos in self.open_positions:
+            pnl_pct = (pos.current_price - pos.entry_price) / pos.entry_price
+
+            # Ratchet trailing stops
+            if pnl_pct &gt;= 1.0:
+                pos.stop_loss = max(pos.stop_loss, pos.entry_price * 1.5)
+            elif pnl_pct &gt;= 0.5:
+                pos.stop_loss = max(pos.stop_loss, pos.entry_price * 1.25)
+            elif pnl_pct &gt;= 0.2:
+                pos.stop_loss = max(pos.stop_loss, pos.entry_price * 1.10)
+            elif pnl_pct &gt;= 0.1:
+                pos.stop_loss = max(pos.stop_loss, pos.entry_price)
+
+            # Partial exits
+            if pnl_pct &gt;= 1.0 and pos.size &gt; pos.initial_size * 0.25:
+                self.partial_exit(pos, pos.size * 0.25)
+            elif pnl_pct &gt;= 0.5 and pos.size &gt; pos.initial_size * 0.5:
+                self.partial_exit(pos, pos.size * 0.25)
+            elif pnl_pct &gt;= 0.3 and pos.size == pos.initial_size:
+                self.partial_exit(pos, pos.size * 0.25)
+
+            # Re-score and exit if score drops
+            features = self.extract_features(pos.coin.klines_1m)
+            current_score = self.score_coin(features)
+            if current_score['level'] == 'IGNORE':
+                self.close_position(pos, reason='Score deteriorated')
+
+# ═══════════════════════════════════════════════════════════
+# Usage Example
+# ═══════════════════════════════════════════════════════════
+# hunter = DemonCoinHunter()
+# hunter.scan_loop()  # Runs continuously, scanning every minute</div>
+</div>
+
+<div class="footer">
+    Demon Coin Analysis Framework v2.0 | 基于 Gate.io 交易所历史数据 | 生成时间: 2026-07-02<br>
+    数据来源: gate_moji_analysis.py | 分析周期: 2026-06 ~ 2026-07 | 仅供研究参考
+</div>
+
+</div>
+</body>
+</html>

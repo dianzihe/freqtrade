@@ -1,0 +1,108 @@
+{
+    // ====================== 基础 ======================
+    "max_open_trades": 20,              // 必须 ≤ 策略里的 max_open_trades_cap(20), 双保险
+    "stake_currency": "USDT",
+    "stake_amount": "unlimited",        // 交给 custom_stake_amount 按"核心+卫星+风险上限"动态分配
+    "tradable_balance_ratio": 0.99,     // 钱包参与交易比例; 真正的预留由策略 margin_reserve_pct(30%)控制
+    "fiat_display_currency": "USD",
+    "dry_run": true,                    // ⚠️ 实盘改 false; 先 dry-run 验证 OCO 触发单 params
+    "dry_run_wallet": 1000,
+    "cancel_open_orders_on_exit": false,
+    "timeframe": "5m",
+
+    // ====================== 合约/永续 ======================
+    "trading_mode": "futures",          // 永续合约模式
+    "margin_mode": "isolated",          // 逐仓: 单仓爆仓不拖累整账户, 比全仓更可控(推荐)
+    "liquidation_buffer": 0.05,         // 距强平价留 5% 缓冲, freqtrade 会提前规避
+
+    // ====================== 下单与滑点容忍 ======================
+    "entry_pricing": {
+        "price_side": "same",           // 入场用同侧价(maker 友好, 配合 limit 单)
+        "use_order_book": true,
+        "order_book_top": 1,
+        "price_last_balance": 0.0,
+        "check_depth_of_market": {
+            "enabled": false,
+            "bids_to_ask_delta": 1
+        }
+    },
+    "exit_pricing": {
+        "price_side": "same",
+        "use_order_book": true,
+        "order_book_top": 1
+    },
+
+    // 未成交挂单的超时撤单: 防止 limit 单长期挂着占用风控额度
+    "unfilledtimeout": {
+        "entry": 10,                    // 入场单 10 分钟未成交则撤
+        "exit": 10,
+        "exit_timeout_count": 0,
+        "unit": "minutes"
+    },
+
+    // ====================== 交易所 (Gate) ======================
+    "exchange": {
+        "name": "gate",                 // ccxt id; gate_oco 用 ccxt.gateio
+        "key": "",                      // ⚠️ 实盘填入; dry-run 留空即可
+        "secret": "",
+        "ccxt_config": {
+            "enableRateLimit": true,
+            "options": {
+                "defaultType": "swap"   // 永续 swap; 与 gate_oco 里的 defaultType 一致
+            }
+        },
+        "ccxt_async_config": {
+            "enableRateLimit": true
+        },
+        // 白名单: 核心篮子(BTC/ETH) + 卫星篮子。
+        // ⚠️ gate_oco.reconcile_orphans 按此白名单逐个 fetch_open_orders;
+        //    若中途移除某 pair, 其孤儿括号单将扫不到 → 改白名单后手动核对一次。
+        "pair_whitelist": [
+            "BTC/USDT:USDT",            // 核心(策略 core_pairs)
+            "ETH/USDT:USDT",            // 核心
+            "SOL/USDT:USDT",            // 卫星
+            "BNB/USDT:USDT",            // 卫星
+            "XRP/USDT:USDT"             // 卫星
+        ],
+        "pair_blacklist": [
+            ".*UP/USDT:USDT", ".*DOWN/USDT:USDT",   // 杠杆代币类, 避免
+            ".*BULL/USDT:USDT", ".*BEAR/USDT:USDT"
+        ]
+    },
+
+    // ====================== 数据下载(回测/hyperopt用) ======================
+    "pairlists": [
+        { "method": "StaticPairList" }
+    ],
+
+    // ====================== 防错与机器人行为 ======================
+    "process_only_new_candles": true,
+    "use_exit_signal": true,
+    "exit_profit_only": false,
+    "ignore_roi_if_entry_signal": false,
+
+    // 内部下单重试 / 容错(freqtrade 自带, 配合 gate_oco 的孤儿单清理)
+    "internals": {
+        "process_throttle_secs": 5,     // 主循环节流; 也是 bot_loop_start(sync_brackets)轮询间隔下限
+        "heartbeat_interval": 60
+    },
+
+    // ====================== API/通知(可选) ======================
+    "telegram": {
+        "enabled": false,
+        "token": "",
+        "chat_id": ""
+    },
+    "api_server": {
+        "enabled": false,
+        "listen_ip_address": "127.0.0.1",
+        "listen_port": 8080,
+        "username": "",
+        "password": ""
+    },
+
+    "initial_state": "running",
+    "force_entry_enable": false,
+    "dataformat_ohlcv": "feather",
+    "db_url": "sqlite:///tradesv3.sqlite"   // 持久化; custom_data(OCO映射/触发flag)依赖它
+}

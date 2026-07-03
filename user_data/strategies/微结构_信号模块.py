@@ -40,8 +40,13 @@ in Limit Order Books" (Hiremath & Hiremath, 2026.04)
 必须使用预处理的 tick 数据（含扩展列），参见 user_data/scripts/build_tick_indicators.py
 """
 
+import ast
+
 import numpy as np
 import pandas as pd
+
+LOB_DEPTH_LEVELS = 25
+DEFAULT_SIGNAL_VALID_BARS = 25
 
 # ═══════════════════════════════════════════════════════════════
 #  Monkey-patch: 保留 feather 文件中的扩展列
@@ -142,6 +147,7 @@ def add_lob_regime_signals(
     threshold_percentile: int = 88,
     confirmation_bars: int = 2,
     min_signal_strength: float = 0.40,
+    signal_valid_bars: int = DEFAULT_SIGNAL_VALID_BARS,
 ) -> pd.DataFrame:
     """
     为 DataFrame 添加 LOB 微结构状态检测信号。
@@ -191,7 +197,7 @@ def add_lob_regime_signals(
     df = _ch4_order_flow(df, lookback_period)
     df = _composite_trigger(
         df, lookback_period, threshold_percentile,
-        confirmation_bars, min_signal_strength,
+        confirmation_bars, min_signal_strength, signal_valid_bars,
     )
 
     return df
@@ -239,27 +245,12 @@ def _ch2_depth_erosion(df: pd.DataFrame, window: int) -> pd.DataFrame:
     和 large_trade_ratio（大单占比下降 = 鲸鱼离开）。
     两个指标同时恶化 → 高置信度深度侵蚀信号。
     """
-    ti = df.get("trade_intensity", pd.Series(0, index=df.index))
-    lr = df.get("large_trade_ratio", pd.Series(0, index=df.index))
+    total_depth = _top10_depth(df)
+    depth_mean = total_depth.rolling(window=window * 2, min_periods=window).mean()
+    depth_std = total_depth.rolling(window=window * 2, min_periods=window).std()
+    depth_z = ((total_depth - depth_mean) / depth_std.replace(0, 1e-10)).fillna(0.0)
 
-    # 成交强度下降
-    ti_mean = ti.rolling(window=window * 2, min_periods=window).mean()
-    ti_std = ti.rolling(window=window * 2, min_periods=window).std()
-    ti_signal = ((ti_mean - ti) / ti_std.replace(0, 1e-10)).fillna(0.0).clip(lower=0)
-
-    # 大单占比下降
-    lr_mean = lr.rolling(window=window * 2, min_periods=window).mean()
-    lr_std = lr.rolling(window=window * 2, min_periods=window).std()
-    lr_signal = ((lr_mean - lr) / lr_std.replace(0, 1e-10)).fillna(0.0).clip(lower=0)
-
-    raw = 0.6 * ti_signal + 0.4 * lr_signal
-    raw_smooth = raw.rolling(window=max(3, window // 3), min_periods=1).mean()
-    half_w = max(2, window // 2)
-    trend = raw_smooth - raw_smooth.shift(half_w)
-    signal = raw_smooth * (trend > 0).astype(float)
-
-    rank_pct = _rolling_percentile(signal, window * 4, window)
-    df["ch2_depth_erosion"] = rank_pct.fillna(0.0).clip(0, 1)
+    df["ch2_depth_erosion"] = (-depth_z).clip(lower=0)
     return df
 
 
@@ -270,19 +261,12 @@ def _ch3_spread_drift(df: pd.DataFrame, window: int) -> pd.DataFrame:
     使用 price_std（5 分钟内成交价格的标准差）替代 high-low 代理。
     price_std 扩大 → 做市商撤单 → spread 变宽 → 压力前兆。
     """
-    ps = df.get("price_std", pd.Series(0, index=df.index))
-    ps_mean = ps.rolling(window=window * 2, min_periods=window).mean()
-    ps_std = ps.rolling(window=window * 2, min_periods=window).std()
-    ps_z = ((ps - ps_mean) / ps_std.replace(0, 1e-10)).fillna(0.0)
+    spread_ratio = _spread_ratio(df)
+    spread_mean = spread_ratio.rolling(window=window * 2, min_periods=window).mean()
+    spread_std = spread_ratio.rolling(window=window * 2, min_periods=window).std()
+    spread_z = ((spread_ratio - spread_mean) / spread_std.replace(0, 1e-10)).fillna(0.0)
 
-    ps_pos = ps_z.clip(lower=0)
-    ps_smooth = ps_pos.rolling(window=max(3, window // 3), min_periods=1).mean()
-    half_w = max(2, window // 2)
-    ps_trend = ps_smooth - ps_smooth.shift(half_w)
-    raw = ps_smooth * (ps_trend > 0).astype(float)
-
-    rank_pct = _rolling_percentile(raw, window * 4, window)
-    df["ch3_spread_drift"] = rank_pct.fillna(0.0).clip(0, 1)
+    df["ch3_spread_drift"] = spread_z.clip(lower=0)
     return df
 
 
@@ -293,21 +277,21 @@ def _ch4_order_flow(df: pd.DataFrame, window: int) -> pd.DataFrame:
     使用 buy_volume_ratio（交易所 B/S 标记直接计算）。
     buy_ratio 持续下降 → 卖压在积累 → 订单流偏向卖方。
     """
-    bvr = df.get("buy_volume_ratio", pd.Series(0.5, index=df.index))
-    sell_pressure = 1.0 - bvr
+    buy_volume = _series_from_columns(df, ["buy_volume", "buy_qty", "taker_buy_volume"])
+    sell_volume = _series_from_columns(df, ["sell_volume", "sell_qty", "taker_sell_volume"])
 
-    sp_mean = sell_pressure.rolling(window=window * 2, min_periods=window).mean()
-    sp_std = sell_pressure.rolling(window=window * 2, min_periods=window).std()
-    sp_z = ((sell_pressure - sp_mean) / sp_std.replace(0, 1e-10)).fillna(0.0)
+    if buy_volume is None or sell_volume is None:
+        buy_ratio = df.get("buy_volume_ratio", pd.Series(0.5, index=df.index)).fillna(0.5)
+        total_volume = df.get("volume", pd.Series(0.0, index=df.index)).fillna(0.0)
+        buy_volume = buy_ratio * total_volume
+        sell_volume = (1.0 - buy_ratio) * total_volume
 
-    sp_pos = sp_z.clip(lower=0)
-    sp_smooth = sp_pos.rolling(window=max(3, window // 3), min_periods=1).mean()
-    half_w = max(2, window // 2)
-    sp_trend = sp_smooth - sp_smooth.shift(half_w)
-    raw = sp_smooth * (sp_trend > 0).astype(float)
+    net_order_flow = buy_volume.fillna(0.0) - sell_volume.fillna(0.0)
+    flow_mean = net_order_flow.rolling(window=window * 2, min_periods=window).mean()
+    flow_std = net_order_flow.rolling(window=window * 2, min_periods=window).std()
+    flow_z = ((net_order_flow - flow_mean) / flow_std.replace(0, 1e-10)).fillna(0.0)
 
-    rank_pct = _rolling_percentile(raw, window * 4, window)
-    df["ch4_order_flow"] = rank_pct.fillna(0.0).clip(0, 1)
+    df["ch4_order_flow"] = flow_z
     return df
 
 
@@ -317,6 +301,7 @@ def _composite_trigger(
     percentile: int,
     n_confirm: int,
     min_floor: float,
+    cooldown_bars: int = DEFAULT_SIGNAL_VALID_BARS,
 ) -> pd.DataFrame:
     """
     MAX 聚合 + 上升沿检测 + 自适应阈值 → 预警触发信号。
@@ -329,7 +314,9 @@ def _composite_trigger(
     ]
 
     # MAX 聚合（论文发现单强通道足矣）
-    df["composite_raw"] = df[channels].max(axis=1)
+    channel_strength = df[channels].copy()
+    channel_strength["ch4_order_flow"] = channel_strength["ch4_order_flow"].abs()
+    df["composite_raw"] = channel_strength.max(axis=1)
     df["composite_smooth"] = df["composite_raw"].rolling(window=3, min_periods=1).mean()
 
     # 上升沿检测（连续 N 根上升）
@@ -355,8 +342,18 @@ def _composite_trigger(
         & (df["composite_smooth"] > min_floor)
     )
 
+    trigger_values = trigger.astype(int).to_numpy().copy()
+    if cooldown_bars > 0:
+        last_trigger = -cooldown_bars - 1
+        for pos, value in enumerate(trigger_values):
+            if value and pos - last_trigger <= cooldown_bars:
+                trigger_values[pos] = 0
+                continue
+            if value:
+                last_trigger = pos
+
     df["adaptive_threshold"] = effective
-    df["signal_trigger"] = trigger.astype(int)
+    df["signal_trigger"] = trigger_values
     return df
 
 
@@ -370,3 +367,127 @@ def _rolling_percentile(series: pd.Series, window: int, min_periods: int) -> pd.
     return series.rolling(window, min_periods=min_periods).apply(
         lambda x: (x.iloc[-1] > x).mean(), raw=False
     )
+
+
+def _series_from_columns(df: pd.DataFrame, names: list[str]) -> pd.Series | None:
+    for name in names:
+        if name in df.columns:
+            return pd.to_numeric(df[name], errors="coerce")
+    return None
+
+
+def _top10_depth(df: pd.DataFrame) -> pd.Series:
+    raw_depth = _depth_from_l2_columns(df)
+    if raw_depth is not None:
+        return raw_depth
+
+    total = _series_from_columns(
+        df,
+        ["top10_depth", "depth_10", "total_depth_10", "l2_total_depth_10", "lob_total_depth"],
+    )
+    if total is not None:
+        return total.fillna(0.0)
+
+    bid_depth = _series_from_columns(df, ["bid_depth_10", "bids_depth_10", "l2_bid_depth_10"])
+    ask_depth = _series_from_columns(df, ["ask_depth_10", "asks_depth_10", "l2_ask_depth_10"])
+    if bid_depth is not None and ask_depth is not None:
+        return bid_depth.fillna(0.0) + ask_depth.fillna(0.0)
+
+    bid_amount = _series_from_columns(df, ["bid_amount"])
+    ask_amount = _series_from_columns(df, ["ask_amount"])
+    if bid_amount is not None and ask_amount is not None:
+        return bid_amount.fillna(0.0) + ask_amount.fillna(0.0)
+
+    return pd.Series(0.0, index=df.index)
+
+
+def _spread_ratio(df: pd.DataFrame) -> pd.Series:
+    raw_spread = _spread_from_l2_columns(df)
+    if raw_spread is not None:
+        return raw_spread
+
+    bid = _series_from_columns(df, ["best_bid", "bid_price", "bid"])
+    ask = _series_from_columns(df, ["best_ask", "ask_price", "ask"])
+    if bid is not None and ask is not None:
+        mid = (bid + ask) / 2.0
+        return ((ask - bid) / mid.replace(0, np.nan)).fillna(0.0)
+
+    spread = _series_from_columns(df, ["spread", "best_spread", "lob_spread"])
+    mid = _series_from_columns(df, ["mid_price", "mid"])
+    if spread is not None and mid is not None:
+        return (spread / mid.replace(0, np.nan)).fillna(0.0)
+
+    return pd.Series(0.0, index=df.index)
+
+
+def _depth_from_l2_columns(df: pd.DataFrame) -> pd.Series | None:
+    bids_col = _first_existing_column(df, ["bids", "bid_updates", "l2_bids"])
+    asks_col = _first_existing_column(df, ["asks", "ask_updates", "l2_asks"])
+    if bids_col is None or asks_col is None:
+        return None
+
+    return pd.Series(
+        [
+            _sum_top_levels(bids, LOB_DEPTH_LEVELS)
+            + _sum_top_levels(asks, LOB_DEPTH_LEVELS)
+            for bids, asks in zip(df[bids_col], df[asks_col])
+        ],
+        index=df.index,
+        dtype="float64",
+    )
+
+
+def _spread_from_l2_columns(df: pd.DataFrame) -> pd.Series | None:
+    bids_col = _first_existing_column(df, ["bids", "bid_updates", "l2_bids"])
+    asks_col = _first_existing_column(df, ["asks", "ask_updates", "l2_asks"])
+    if bids_col is None or asks_col is None:
+        return None
+
+    return pd.Series(
+        [_best_spread_ratio(bids, asks) for bids, asks in zip(df[bids_col], df[asks_col])],
+        index=df.index,
+        dtype="float64",
+    )
+
+
+def _first_existing_column(df: pd.DataFrame, names: list[str]) -> str | None:
+    for name in names:
+        if name in df.columns:
+            return name
+    return None
+
+
+def _parse_l2_levels(value) -> list:
+    if isinstance(value, str):
+        try:
+            parsed = ast.literal_eval(value)
+        except (SyntaxError, ValueError):
+            return []
+        return parsed if isinstance(parsed, list) else []
+    return value if isinstance(value, list) else []
+
+
+def _sum_top_levels(value, levels: int) -> float:
+    total = 0.0
+    for level in _parse_l2_levels(value)[:levels]:
+        try:
+            total += max(float(level[1]), 0.0)
+        except (TypeError, ValueError, IndexError):
+            continue
+    return total
+
+
+def _best_spread_ratio(bids, asks) -> float:
+    bid_levels = _parse_l2_levels(bids)
+    ask_levels = _parse_l2_levels(asks)
+    if not bid_levels or not ask_levels:
+        return 0.0
+    try:
+        best_bid = float(bid_levels[0][0])
+        best_ask = float(ask_levels[0][0])
+    except (TypeError, ValueError, IndexError):
+        return 0.0
+    mid = (best_bid + best_ask) / 2.0
+    if mid <= 0:
+        return 0.0
+    return (best_ask - best_bid) / mid

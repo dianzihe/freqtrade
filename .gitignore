@@ -14,6 +14,8 @@ user_data/tick_data/*
 user_data/tickdata/*
 user_data/notebooks/*
 user_data/data/*
+user_data/l2data/*
+user_data/orderbook_data/*
 user_data/backtest_results/*
 user_data/backtest_output/*
 user_data/intraday_time_window_report/*
@@ -25,7 +27,7 @@ freqtrade-plot.html
 freqtrade-profit-plot.html
 freqtrade/rpc/api_server/ui/*
 build_helpers/ta-lib/*
-
+.workbuddy/*
 # Macos related
 .DS_Store
 

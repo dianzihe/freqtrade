@@ -1,0 +1,159 @@
+{
+  "factors": {
+    "A1_price_momentum": {
+      "name": "价格动量",
+      "description": "启动前6小时累计涨幅",
+      "formula": "pre_change_pct = (close[-1] - open[0]) / open[0] * 100",
+      "threshold_strong": 4.0,
+      "threshold_moderate": 2.0,
+      "threshold_weak": 1.0,
+      "weight": 15,
+      "category": "A_Price_Volume"
+    },
+    "A2_volume_surge": {
+      "name": "量能爆发",
+      "description": "最后一小时成交量 vs 前5小时均量",
+      "formula": "volume_ratio = last_1h_volume / avg(earlier_5h_volume)",
+      "threshold_strong": 3.0,
+      "threshold_moderate": 2.0,
+      "threshold_weak": 1.5,
+      "weight": 15,
+      "category": "A_Price_Volume"
+    },
+    "A3_sma_momentum": {
+      "name": "趋势强度",
+      "description": "SMA12斜率（百分比）",
+      "formula": "sma12_slope = (sma12[-1] - sma12[-24]) / sma12[-24] * 100",
+      "threshold_strong": 3.0,
+      "threshold_moderate": 1.5,
+      "threshold_weak": 0.5,
+      "weight": 10,
+      "category": "A_Price_Volume"
+    },
+    "B1_staircase": {
+      "name": "阶梯吸筹形态",
+      "description": "最近6根5分钟K线收盘递增比例",
+      "formula": "staircase = count(close[i] >= close[i-1] for i in 1..5) / 5",
+      "threshold_strong": 0.8,
+      "threshold_moderate": 0.6,
+      "threshold_weak": 0.4,
+      "weight": 15,
+      "category": "B_Pattern"
+    },
+    "B2_range_behavior": {
+      "name": "振幅扩张",
+      "description": "近期振幅与前期振幅之比",
+      "formula": "range_ratio = avg(recent_range) / avg(earlier_range)",
+      "threshold_strong": 1.5,
+      "threshold_moderate": 1.2,
+      "threshold_weak": 1.0,
+      "weight": 10,
+      "category": "B_Pattern"
+    },
+    "C1_volatility_regime": {
+      "name": "波动率环境",
+      "description": "6小时年化波动率（适中最佳）",
+      "formula": "volatility = std(log_returns) * sqrt(288)",
+      "threshold_strong": [
+        0.08,
+        0.2
+      ],
+      "threshold_moderate": [
+        0.05,
+        0.3
+      ],
+      "threshold_weak": [
+        0.03,
+        0.5
+      ],
+      "weight": 10,
+      "category": "C_Context"
+    },
+    "C2_volume_quality": {
+      "name": "成交量质量",
+      "description": "成交量偏度（正偏 = 放量集中）",
+      "formula": "vol_skew = volume_distribution_skewness",
+      "threshold_strong": [
+        0,
+        2
+      ],
+      "threshold_moderate": [
+        -1,
+        4
+      ],
+      "threshold_weak": [
+        -2,
+        6
+      ],
+      "weight": 10,
+      "category": "C_Context"
+    },
+    "D1_timing": {
+      "name": "时间窗口",
+      "description": "是否在活跃交易时段",
+      "formula": "timing_score = session_activity_score(hour_utc)",
+      "threshold_strong": "Asia Active / US Morning",
+      "threshold_moderate": "Europe Morning / US Afternoon",
+      "threshold_weak": "Other active hours",
+      "weight": 10,
+      "category": "D_Timing"
+    },
+    "D2_relative_strength": {
+      "name": "相对强度",
+      "description": "与BTC/ETH同期表现的差异",
+      "formula": "relative_strength = coin_return_pct - max(btc_return, eth_return)",
+      "threshold_strong": 3.0,
+      "threshold_moderate": 1.5,
+      "threshold_weak": 0.5,
+      "weight": 5,
+      "category": "D_Timing"
+    }
+  },
+  "scoring": {
+    "method": "hierarchical_weighted_sum",
+    "description": "分层加权求和：每类因子独立评分子分，再按类别权重综合",
+    "category_weights": {
+      "A_Price_Volume": 40,
+      "B_Pattern": 25,
+      "C_Context": 20,
+      "D_Timing": 15
+    },
+    "overall_thresholds": {
+      "STRONG_BUY": {
+        "min_score": 80,
+        "min_categories": 3,
+        "action": "立即轻仓买入（2%仓位）"
+      },
+      "BUY": {
+        "min_score": 65,
+        "min_categories": 2,
+        "action": "准备买入，等待量价确认"
+      },
+      "WATCH": {
+        "min_score": 45,
+        "min_categories": 1,
+        "action": "加入观察列表，持续监控"
+      },
+      "IGNORE": {
+        "min_score": 0,
+        "min_categories": 0,
+        "action": "不关注"
+      }
+    },
+    "candidate_pool_filter": {
+      "min_market_cap_usd": ">= $1,000,000（排除极端微盘）",
+      "max_market_cap_usd": "无上限（大盘币也可能出现妖币行情）",
+      "min_24h_volume_usd": ">= $50,000（确保基本流动性）",
+      "min_exchange_count": ">= 2（避免单交易所操纵）",
+      "max_price_usd": "无限制",
+      "min_price_usd": ">= $0.0001",
+      "exclude_stablecoins": true,
+      "exclude_wrapped_tokens": "W-前缀代币（跨链包装代币）"
+    },
+    "scan_frequency": {
+      "recommended": "每分钟扫描一次（1分钟K线）",
+      "batch_window": "每小时汇总评分，生成 Top 20 候选名单",
+      "re_evaluation": "已持仓品种每15分钟重新评分，评分跌破45分触发减持"
+    }
+  }
+}

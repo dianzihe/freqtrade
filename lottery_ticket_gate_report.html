@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lottery Ticket Momentum V3 - Gate 回测报告</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card-bg: #1a1d28;
+    --border: #2a2e3c;
+    --text: #e0e3eb;
+    --text-dim: #8b8fa3;
+    --red: #ef4444;
+    --green: #22c55e;
+    --blue: #3b82f6;
+    --yellow: #eab308;
+    --purple: #a855f7;
+    --orange: #f97316;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; padding: 20px; line-height: 1.6; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 28px; margin-bottom: 8px; color: var(--text); }
+  h2 { font-size: 22px; margin: 30px 0 15px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  h3 { font-size: 16px; margin: 20px 0 10px; color: var(--text-dim); }
+  .subtitle { color: var(--text-dim); margin-bottom: 25px; font-size: 14px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+  .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .card-value { font-size: 28px; font-weight: 700; }
+  .card-sub { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .neutral { color: var(--text); }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+  th { background: var(--card-bg); padding: 12px 15px; text-align: left; font-weight: 600; color: var(--text-dim); border-bottom: 2px solid var(--border); }
+  td { padding: 10px 15px; border-bottom: 1px solid var(--border); }
+  tr:hover { background: rgba(255,255,255,0.03); }
+  .chart-container { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; position: relative; }
+  .chart-wrapper { position: relative; height: 350px; }
+  .warning { background: rgba(234, 179, 8, 0.1); border: 1px solid var(--yellow); border-radius: 8px; padding: 15px; margin: 15px 0; color: var(--yellow); font-size: 14px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+  .tag-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+  .tag-sniper { background: rgba(168, 85, 247, 0.2); color: var(--purple); }
+  .tag-breakout { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
+  .tag-pullback { background: rgba(249, 115, 22, 0.2); color: var(--orange); }
+  .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Lottery Ticket Momentum V3.1 — Gate 回测报告</h1>
+<p class="subtitle">策略: LotteryTicketMomentumV3 | 交易所: Gate (现货) | 数据: 2026-06-24 ~ 2026-07-02 | 有效回测: 2026-06-25 09:20 ~ 2026-07-02 00:00 (约6.5天) | 交易对: 195个 USDT 现货对</p>
+
+<div class="warning">
+  <strong>⚠️ 窗口过短警告:</strong> 策略文档明确指出 "5天窗口无法评估彩票策略（右尾赢家出现概率极低）"。当前仅约6.5天数据，样本极小，以下结果仅供参考，不可作为策略有效性的最终判断。
+</div>
+
+
+<h2>核心指标</h2>
+<div class="cards">
+  <div class="card">
+    <div class="card-label">总交易数</div>
+    <div class="card-value neutral">31</div>
+    <div class="card-sub">已平仓 + 0 笔未平仓</div>
+  </div>
+  <div class="card">
+    <div class="card-label">总盈亏</div>
+    <div class="card-value neg">-0.967 USDT</div>
+    <div class="card-sub">-0.10% (初始1000 USDT)</div>
+  </div>
+  <div class="card">
+    <div class="card-label">胜率</div>
+    <div class="card-value neg">25.8%</div>
+    <div class="card-sub">8 胜 / 23 负</div>
+  </div>
+  <div class="card">
+    <div class="card-label">盈亏比</div>
+    <div class="card-value neg">0.17</div>
+    <div class="card-sub">总盈利 / 总亏损</div>
+  </div>
+  <div class="card">
+    <div class="card-label">平均每笔收益</div>
+    <div class="card-value neg">-3.64%</div>
+    <div class="card-sub">平均持仓 19.1h</div>
+  </div>
+  <div class="card">
+    <div class="card-label">最大连续亏损</div>
+    <div class="card-value neg">10</div>
+    <div class="card-sub">最大连续盈利 3</div>
+  </div>
+  <div class="card">
+    <div class="card-label">最佳交易</div>
+    <div class="card-value pos">+14.8%</div>
+    <div class="card-sub">H/USDT</div>
+  </div>
+  <div class="card">
+    <div class="card-label">最差交易</div>
+    <div class="card-value neg">-6.2%</div>
+    <div class="card-sub">NAORIS/USDT</div>
+  </div>
+</div>
+
+
+<h2>每日盈亏</h2>
+<div class="chart-container">
+  <div class="chart-wrapper">
+    <canvas id="dailyChart"></canvas>
+  </div>
+</div>
+
+<h2>累计盈亏曲线</h2>
+<div class="chart-container">
+  <div class="chart-wrapper">
+    <canvas id="cumChart"></canvas>
+  </div>
+</div>
+
+<h2>入场信号分析</h2>
+<table>
+<thead><tr><th>入场标签</th><th>交易数</th><th>总盈亏 (USDT)</th><th>平均收益 (%)</th><th>胜率</th><th>平均持仓 (h)</th></tr></thead>
+<tbody>
+<tr>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>17</td>
+      <td class="neg">-0.452</td>
+      <td class="neg">-3.23%</td>
+      <td>23.5% (4W/13L)</td>
+      <td>30.8</td>
+    </tr>
+<tr>
+      <td><span class="tag-badge tag-pullback">lottery_pullback_c</span></td>
+      <td>6</td>
+      <td class="neg">-0.219</td>
+      <td class="neg">-3.92%</td>
+      <td>33.3% (2W/4L)</td>
+      <td>2.2</td>
+    </tr>
+<tr>
+      <td><span class="tag-badge tag-sniper">lottery_sniper_a</span></td>
+      <td>8</td>
+      <td class="neg">-0.295</td>
+      <td class="neg">-4.30%</td>
+      <td>25.0% (2W/6L)</td>
+      <td>6.8</td>
+    </tr>
+</tbody></table>
+<h2>退出原因分析</h2>
+<table>
+<thead><tr><th>退出原因</th><th>交易数</th><th>总盈亏 (USDT)</th><th>平均收益 (%)</th><th>胜率</th><th>平均持仓 (h)</th></tr></thead>
+<tbody>
+<tr>
+      <td>force_exit</td>
+      <td>5</td>
+      <td class="pos">+0.015</td>
+      <td class="pos">+0.43%</td>
+      <td>60.0% (3W/2L)</td>
+      <td>32.5</td>
+    </tr>
+<tr>
+      <td>stop_loss</td>
+      <td>21</td>
+      <td class="neg">-1.128</td>
+      <td class="neg">-6.18%</td>
+      <td>0.0% (0W/21L)</td>
+      <td>15.7</td>
+    </tr>
+<tr>
+      <td>trailing_stop_loss</td>
+      <td>5</td>
+      <td class="pos">+0.147</td>
+      <td class="pos">+2.96%</td>
+      <td>100.0% (5W/0L)</td>
+      <td>20.0</td>
+    </tr>
+</tbody></table>
+
+<div class="grid-2">
+  <div class="chart-container">
+    <h3>入场信号分布</h3>
+    <div class="chart-wrapper">
+      <canvas id="tagPieChart"></canvas>
+    </div>
+  </div>
+  <div class="chart-container">
+    <h3>退出原因分布</h3>
+    <div class="chart-wrapper">
+      <canvas id="exitPieChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<h2>交易对表现</h2>
+<table>
+<thead><tr><th>交易对</th><th>交易数</th><th>总盈亏 (USDT)</th><th>平均收益 (%)</th></tr></thead>
+<tbody>
+<tr>
+      <td>ESPORTS/USDT</td>
+      <td>3</td>
+      <td class="neg">-0.114</td>
+      <td class="neg">-4.11%</td>
+    </tr>
+<tr>
+      <td>ZORA/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.062</td>
+      <td class="neg">-6.19%</td>
+    </tr>
+<tr>
+      <td>TAG/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.061</td>
+      <td class="neg">-6.18%</td>
+    </tr>
+<tr>
+      <td>XCN/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.061</td>
+      <td class="neg">-6.17%</td>
+    </tr>
+<tr>
+      <td>BRETT/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.061</td>
+      <td class="neg">-6.18%</td>
+    </tr>
+<tr>
+      <td>NAORIS/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.061</td>
+      <td class="neg">-6.19%</td>
+    </tr>
+<tr>
+      <td>SKYAI/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.059</td>
+      <td class="neg">-6.17%</td>
+    </tr>
+<tr>
+      <td>BLUAI/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.059</td>
+      <td class="neg">-6.18%</td>
+    </tr>
+<tr>
+      <td>PENGU/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.059</td>
+      <td class="neg">-6.18%</td>
+    </tr>
+<tr>
+      <td>SEI/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.059</td>
+      <td class="neg">-6.18%</td>
+    </tr>
+<tr>
+      <td>AIOT/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.057</td>
+      <td class="neg">-6.17%</td>
+    </tr>
+<tr>
+      <td>RIF/USDT</td>
+      <td>3</td>
+      <td class="neg">-0.055</td>
+      <td class="neg">-3.23%</td>
+    </tr>
+<tr>
+      <td>MYX/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.055</td>
+      <td class="neg">-6.18%</td>
+    </tr>
+<tr>
+      <td>MITO/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.053</td>
+      <td class="neg">-6.18%</td>
+    </tr>
+<tr>
+      <td>ARIA/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.052</td>
+      <td class="neg">-6.17%</td>
+    </tr>
+<tr>
+      <td>SIREN/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.051</td>
+      <td class="neg">-6.18%</td>
+    </tr>
+<tr>
+      <td>PYTH/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.042</td>
+      <td class="neg">-6.17%</td>
+    </tr>
+<tr>
+      <td>USELESS/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.041</td>
+      <td class="neg">-6.18%</td>
+    </tr>
+<tr>
+      <td>CHIP/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.039</td>
+      <td class="neg">-3.92%</td>
+    </tr>
+<tr>
+      <td>TA/USDT</td>
+      <td>2</td>
+      <td class="neg">-0.033</td>
+      <td class="neg">-2.50%</td>
+    </tr>
+<tr>
+      <td>KAS/USDT</td>
+      <td>1</td>
+      <td class="neg">-0.003</td>
+      <td class="neg">-0.26%</td>
+    </tr>
+<tr>
+      <td>UB/USDT</td>
+      <td>1</td>
+      <td class="pos">+0.000</td>
+      <td class="pos">+0.00%</td>
+    </tr>
+<tr>
+      <td>PUMP/USDT</td>
+      <td>1</td>
+      <td class="pos">+0.000</td>
+      <td class="pos">+0.01%</td>
+    </tr>
+<tr>
+      <td>AIN/USDT</td>
+      <td>1</td>
+      <td class="pos">+0.000</td>
+      <td class="pos">+0.01%</td>
+    </tr>
+<tr>
+      <td>XPIN/USDT</td>
+      <td>1</td>
+      <td class="pos">+0.024</td>
+      <td class="pos">+2.46%</td>
+    </tr>
+<tr>
+      <td>H/USDT</td>
+      <td>1</td>
+      <td class="pos">+0.147</td>
+      <td class="pos">+14.78%</td>
+    </tr>
+</tbody></table>
+<h2>详细交易记录</h2>
+<table>
+<thead><tr><th>#</th><th>交易对</th><th>入场标签</th><th>开仓时间</th><th>平仓时间</th><th>持仓(h)</th><th>收益(%)</th><th>盈亏(USDT)</th><th>退出原因</th></tr></thead>
+<tbody>
+<tr>
+      <td>1</td>
+      <td>SEI/USDT</td>
+      <td><span class="tag-badge tag-sniper">lottery_sniper_a</span></td>
+      <td>06-25 09:45</td>
+      <td>06-26 02:00</td>
+      <td>16.2</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0586</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>2</td>
+      <td>RIF/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-25 11:55</td>
+      <td>06-25 15:05</td>
+      <td>3.2</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0429</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>3</td>
+      <td>TA/USDT</td>
+      <td><span class="tag-badge tag-sniper">lottery_sniper_a</span></td>
+      <td>06-25 14:05</td>
+      <td>06-26 09:45</td>
+      <td>19.7</td>
+      <td class="neg">-6.19%</td>
+      <td class="neg">-0.0406</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>4</td>
+      <td>MITO/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-25 21:05</td>
+      <td>06-26 02:10</td>
+      <td>5.1</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0529</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>5</td>
+      <td>AIN/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-26 00:55</td>
+      <td>06-26 05:40</td>
+      <td>4.8</td>
+      <td class="pos">+0.01%</td>
+      <td class="pos">+0.0001</td>
+      <td>trailing_stop_loss</td>
+    </tr>
+<tr>
+      <td>6</td>
+      <td>BLUAI/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-26 02:55</td>
+      <td>06-27 16:45</td>
+      <td>37.8</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0595</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>7</td>
+      <td>UB/USDT</td>
+      <td><span class="tag-badge tag-sniper">lottery_sniper_a</span></td>
+      <td>06-26 09:35</td>
+      <td>06-26 10:30</td>
+      <td>0.9</td>
+      <td class="pos">+0.00%</td>
+      <td class="pos">+0.0000</td>
+      <td>trailing_stop_loss</td>
+    </tr>
+<tr>
+      <td>8</td>
+      <td>ARIA/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-26 12:35</td>
+      <td>06-28 10:15</td>
+      <td>45.7</td>
+      <td class="neg">-6.17%</td>
+      <td class="neg">-0.0522</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>9</td>
+      <td>ESPORTS/USDT</td>
+      <td><span class="tag-badge tag-pullback">lottery_pullback_c</span></td>
+      <td>06-26 15:05</td>
+      <td>06-26 15:35</td>
+      <td>0.5</td>
+      <td class="pos">+0.01%</td>
+      <td class="pos">+0.0000</td>
+      <td>trailing_stop_loss</td>
+    </tr>
+<tr>
+      <td>10</td>
+      <td>XCN/USDT</td>
+      <td><span class="tag-badge tag-sniper">lottery_sniper_a</span></td>
+      <td>06-27 00:45</td>
+      <td>06-27 04:00</td>
+      <td>3.2</td>
+      <td class="neg">-6.17%</td>
+      <td class="neg">-0.0612</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>11</td>
+      <td>PENGU/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-27 03:15</td>
+      <td>07-01 01:10</td>
+      <td>93.9</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0588</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>12</td>
+      <td>BRETT/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-27 06:10</td>
+      <td>06-30 11:30</td>
+      <td>77.3</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0612</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>13</td>
+      <td>NAORIS/USDT</td>
+      <td><span class="tag-badge tag-pullback">lottery_pullback_c</span></td>
+      <td>06-27 08:10</td>
+      <td>06-27 10:20</td>
+      <td>2.2</td>
+      <td class="neg">-6.19%</td>
+      <td class="neg">-0.0609</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>14</td>
+      <td>ESPORTS/USDT</td>
+      <td><span class="tag-badge tag-pullback">lottery_pullback_c</span></td>
+      <td>06-27 12:00</td>
+      <td>06-27 12:35</td>
+      <td>0.6</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0578</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>15</td>
+      <td>PUMP/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-27 14:50</td>
+      <td>07-01 01:10</td>
+      <td>82.3</td>
+      <td class="pos">+0.01%</td>
+      <td class="pos">+0.0001</td>
+      <td>trailing_stop_loss</td>
+    </tr>
+<tr>
+      <td>16</td>
+      <td>MYX/USDT</td>
+      <td><span class="tag-badge tag-sniper">lottery_sniper_a</span></td>
+      <td>06-28 00:00</td>
+      <td>06-28 03:50</td>
+      <td>3.8</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0553</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>17</td>
+      <td>CHIP/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-28 05:50</td>
+      <td>07-02 00:00</td>
+      <td>90.2</td>
+      <td class="neg">-3.92%</td>
+      <td class="neg">-0.0387</td>
+      <td>force_exit</td>
+    </tr>
+<tr>
+      <td>18</td>
+      <td>SIREN/USDT</td>
+      <td><span class="tag-badge tag-pullback">lottery_pullback_c</span></td>
+      <td>06-28 10:15</td>
+      <td>06-28 11:50</td>
+      <td>1.6</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0508</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>19</td>
+      <td>ZORA/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-28 13:40</td>
+      <td>06-28 19:45</td>
+      <td>6.1</td>
+      <td class="neg">-6.19%</td>
+      <td class="neg">-0.0616</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>20</td>
+      <td>RIF/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-29 04:25</td>
+      <td>06-29 07:45</td>
+      <td>3.3</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0365</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>21</td>
+      <td>TAG/USDT</td>
+      <td><span class="tag-badge tag-sniper">lottery_sniper_a</span></td>
+      <td>06-29 09:40</td>
+      <td>06-29 14:40</td>
+      <td>5.0</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0614</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>22</td>
+      <td>H/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-29 14:50</td>
+      <td>06-30 02:25</td>
+      <td>11.6</td>
+      <td class="pos">+14.78%</td>
+      <td class="pos">+0.1465</td>
+      <td>trailing_stop_loss</td>
+    </tr>
+<tr>
+      <td>23</td>
+      <td>USELESS/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-30 04:10</td>
+      <td>06-30 05:20</td>
+      <td>1.2</td>
+      <td class="neg">-6.18%</td>
+      <td class="neg">-0.0410</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>24</td>
+      <td>KAS/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>06-30 09:35</td>
+      <td>07-02 00:00</td>
+      <td>38.4</td>
+      <td class="neg">-0.26%</td>
+      <td class="neg">-0.0026</td>
+      <td>force_exit</td>
+    </tr>
+<tr>
+      <td>25</td>
+      <td>AIOT/USDT</td>
+      <td><span class="tag-badge tag-pullback">lottery_pullback_c</span></td>
+      <td>06-30 12:10</td>
+      <td>06-30 12:40</td>
+      <td>0.5</td>
+      <td class="neg">-6.17%</td>
+      <td class="neg">-0.0572</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>26</td>
+      <td>PYTH/USDT</td>
+      <td><span class="tag-badge tag-sniper">lottery_sniper_a</span></td>
+      <td>06-30 14:15</td>
+      <td>06-30 14:45</td>
+      <td>0.5</td>
+      <td class="neg">-6.17%</td>
+      <td class="neg">-0.0423</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>27</td>
+      <td>XPIN/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>07-01 03:20</td>
+      <td>07-02 00:00</td>
+      <td>20.7</td>
+      <td class="pos">+2.46%</td>
+      <td class="pos">+0.0245</td>
+      <td>force_exit</td>
+    </tr>
+<tr>
+      <td>28</td>
+      <td>SKYAI/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>07-01 07:20</td>
+      <td>07-01 08:30</td>
+      <td>1.2</td>
+      <td class="neg">-6.17%</td>
+      <td class="neg">-0.0595</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>29</td>
+      <td>ESPORTS/USDT</td>
+      <td><span class="tag-badge tag-breakout">lottery_breakout_b</span></td>
+      <td>07-01 11:45</td>
+      <td>07-01 13:00</td>
+      <td>1.2</td>
+      <td class="neg">-6.16%</td>
+      <td class="neg">-0.0560</td>
+      <td>stop_loss</td>
+    </tr>
+<tr>
+      <td>30</td>
+      <td>TA/USDT</td>
+      <td><span class="tag-badge tag-pullback">lottery_pullback_c</span></td>
+      <td>07-01 15:50</td>
+      <td>07-02 00:00</td>
+      <td>8.2</td>
+      <td class="pos">+1.19%</td>
+      <td class="pos">+0.0076</td>
+      <td>force_exit</td>
+    </tr>
+<tr>
+      <td>31</td>
+      <td>RIF/USDT</td>
+      <td><span class="tag-badge tag-sniper">lottery_sniper_a</span></td>
+      <td>07-01 19:05</td>
+      <td>07-02 00:00</td>
+      <td>4.9</td>
+      <td class="pos">+2.68%</td>
+      <td class="pos">+0.0240</td>
+      <td>force_exit</td>
+    </tr>
+</tbody></table>
+
+<h2>分析与结论</h2>
+<div class="card" style="padding: 25px;">
+  <h3>策略表现概述</h3>
+  <p style="margin-bottom: 15px;">在约6.5天的回测窗口中，策略共触发 <strong>31笔已平仓交易</strong>，总亏损 <strong>-0.967 USDT (-0.10%)</strong>。
+  胜率仅 <strong>25.8%</strong>，盈亏比 <strong>0.17</strong>，远低于盈利所需水平。21笔交易触发止损（-6%），仅5笔通过棘轮止损获利退出。</p>
+
+  <h3>入场信号对比</h3>
+  <ul style="margin-bottom: 15px; padding-left: 20px;">
+    <li><strong>lottery_breakout_b</strong> (17笔): 触发最多但表现最差，23.5%胜率，总亏 -0.452 USDT</li>
+    <li><strong>lottery_sniper_a</strong> (8笔): 25.0%胜率，总亏 -0.295 USDT，6笔止损</li>
+    <li><strong>lottery_pullback_c</strong> (6笔): 胜率最高 33.3%，但4笔止损仍导致 -0.219 USDT 亏损</li>
+  </ul>
+
+  <h3>退出机制分析</h3>
+  <ul style="margin-bottom: 15px; padding-left: 20px;">
+    <li><strong>止损 (stop_loss):</strong> 21笔全部亏损，共 -1.128 USDT — 止损触发率67.7%，说明入场后大部分行情不利</li>
+    <li><strong>棘轮止损 (trailing_stop_loss):</strong> 5笔全部盈利，共 +0.147 USDT — 棘轮机制在有利行情中有效锁定利润</li>
+    <li><strong>强制退出 (force_exit):</strong> 5笔（含未平仓），3盈2亏，+0.015 USDT — 时间止损触发正常</li>
+  </ul>
+
+  <h3>关键问题</h3>
+  <ul style="margin-bottom: 15px; padding-left: 20px;">
+    <li><strong>样本不足:</strong> 6.5天/31笔交易远不足以评估彩票策略。策略需要3-6个月含妖币行情的数据</li>
+    <li><strong>止损率过高:</strong> 67.7%的交易触发-6%止损，说明入场时机或阈值可能需要优化</li>
+    <li><strong>盈亏比失衡:</strong> 0.17的盈亏比意味着赢的钱远不够弥补亏损，需要更大的"彩票"赢家</li>
+    <li><strong>最佳交易仅+14.78%:</strong> 彩票策略依赖偶尔的暴涨（+50%~+200%），但本窗口未出现此类行情</li>
+    <li><strong>101个信号被拒:</strong> 票数限制和冷却期工作正常，但也意味着很多潜在机会被过滤</li>
+  </ul>
+
+  <h3>建议</h3>
+  <ul style="padding-left: 20px;">
+    <li>使用更长的时间窗口（至少3个月）重新回测，包含牛市/妖币行情</li>
+    <li>考虑对 breakout_b 信号提高阈值或增加额外过滤条件，降低假突破入场</li>
+    <li>评估是否需要放宽每日票数限制（当前6票/天），以增加样本量</li>
+    <li>棘轮止损表现良好，可考虑在更多盈利区间提前触发棘轮</li>
+    <li>考虑加入趋势强度过滤（如 BTC 日线级别），在明确牛市时加大信号灵敏度</li>
+  </ul>
+</div>
+
+
+<div class="footer">
+  回测报告生成时间: 2026-07-02 17:05:02 | 策略: LotteryTicketMomentumV3 | 数据源: Gate 现货
+</div>
+</div>
+
+<script>
+// Daily PnL Bar Chart
+new Chart(document.getElementById('dailyChart'), {
+  type: 'bar',
+  data: {
+    labels: ["2026-06-25", "2026-06-26", "2026-06-27", "2026-06-28", "2026-06-29", "2026-06-30", "2026-07-01", "2026-07-02"],
+    datasets: [{
+      label: '每日盈亏 (USDT)',
+      data: [-0.0429, -0.152, -0.2394, -0.2198, -0.0979, -0.0551, -0.1743, 0.0147],
+      backgroundColor: ["#ef4444", "#ef4444", "#ef4444", "#ef4444", "#ef4444", "#ef4444", "#ef4444", "#22c55e"],
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#8b8fa3' }, grid: { color: '#2a2e3c' } },
+      y: { ticks: { color: '#8b8fa3' }, grid: { color: '#2a2e3c' } }
+    }
+  }
+});
+
+// Cumulative PnL Line Chart
+new Chart(document.getElementById('cumChart'), {
+  type: 'line',
+  data: {
+    labels: ["2026-06-25", "2026-06-26", "2026-06-27", "2026-06-28", "2026-06-29", "2026-06-30", "2026-07-01", "2026-07-02"],
+    datasets: [{
+      label: '累计盈亏 (USDT)',
+      data: [-0.0429, -0.1949, -0.4344, -0.6542, -0.7521, -0.8072, -0.9814, -0.9667],
+      borderColor: '#3b82f6',
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      fill: true,
+      tension: 0.3,
+      pointRadius: 5,
+      pointBackgroundColor: '#3b82f6',
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#8b8fa3' }, grid: { color: '#2a2e3c' } },
+      y: { ticks: { color: '#8b8fa3' }, grid: { color: '#2a2e3c' } }
+    }
+  }
+});
+
+// Entry Tag Pie Chart
+new Chart(document.getElementById('tagPieChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ["lottery_breakout_b", "lottery_pullback_c", "lottery_sniper_a"],
+    datasets: [{
+      data: [17, 6, 8],
+      backgroundColor: ['#a855f7', '#3b82f6', '#f97316'],
+      borderWidth: 0,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#8b8fa3', padding: 15 } }
+    }
+  }
+});
+
+// Exit Reason Pie Chart
+new Chart(document.getElementById('exitPieChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ["force_exit", "stop_loss", "trailing_stop_loss"],
+    datasets: [{
+      data: [5, 21, 5],
+      backgroundColor: ['#ef4444', '#22c55e', '#eab308'],
+      borderWidth: 0,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#8b8fa3', padding: 15 } }
+    }
+  }
+});
+</script>
+</body>
+</html>

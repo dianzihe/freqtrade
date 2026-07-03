@@ -1,0 +1,62 @@
+[
+  {
+    "label": "v1_base",
+    "total_trades": 49,
+    "win_rate": 26.53061224489796,
+    "avg_profit_pct": 0.1835110789165637,
+    "avg_win_pct": 14.819813926773405,
+    "avg_loss_pct": -5.101820505031739,
+    "profit_factor": 1.048958791921232,
+    "total_net_usd": -0.008259412188221016,
+    "roi_pct": -51.16259412188213,
+    "final_capital": 4.883740587811786,
+    "avg_hold_hours": 16.176870748299322,
+    "avg_peak_pct": 8.631691776833234,
+    "n_open": 5
+  },
+  {
+    "label": "v2_loose",
+    "total_trades": 55,
+    "win_rate": 20.0,
+    "avg_profit_pct": -2.1954853574936877,
+    "avg_win_pct": 10.616506312224265,
+    "avg_loss_pct": -5.3984832749231755,
+    "profit_factor": 0.49164301210025263,
+    "total_net_usd": -1.3151019127282855,
+    "roi_pct": -64.3510191272828,
+    "final_capital": 3.564898087271721,
+    "avg_hold_hours": 15.92121212121212,
+    "avg_peak_pct": 7.556343102250767,
+    "n_open": 5
+  },
+  {
+    "label": "v3_tight",
+    "total_trades": 46,
+    "win_rate": 28.26086956521739,
+    "avg_profit_pct": 0.1351030244997213,
+    "avg_win_pct": 15.202414025469194,
+    "avg_loss_pct": -5.800504339518556,
+    "profit_factor": 1.0324670782172283,
+    "total_net_usd": -0.029976903512667685,
+    "roi_pct": -51.319769035126605,
+    "final_capital": 4.868023096487339,
+    "avg_hold_hours": 16.567028985507246,
+    "avg_peak_pct": 9.832733122165667,
+    "n_open": 5
+  },
+  {
+    "label": "v4_strong",
+    "total_trades": 48,
+    "win_rate": 27.083333333333332,
+    "avg_profit_pct": -1.9515640637854563,
+    "avg_win_pct": 9.76146979491876,
+    "avg_loss_pct": -6.302119497018451,
+    "profit_factor": 0.5753126043841517,
+    "total_net_usd": -1.0308772491157856,
+    "roi_pct": -61.368772491157806,
+    "final_capital": 3.8631227508842194,
+    "avg_hold_hours": 15.440972222222221,
+    "avg_peak_pct": 7.621126355934231,
+    "n_open": 5
+  }
+]

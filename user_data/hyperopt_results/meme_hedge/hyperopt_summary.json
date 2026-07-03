@@ -1,0 +1,353 @@
+[
+  {
+    "coin": "BTC",
+    "tf": "1m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "BTC",
+    "tf": "5m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "BTC",
+    "tf": "15m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "ETH",
+    "tf": "1m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "ETH",
+    "tf": "5m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "ETH",
+    "tf": "15m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "SOL",
+    "tf": "1m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "SOL",
+    "tf": "5m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "SOL",
+    "tf": "15m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "XRP",
+    "tf": "1m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "XRP",
+    "tf": "5m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "XRP",
+    "tf": "15m",
+    "group": "稳定主流币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "XCN",
+    "tf": "1m",
+    "group": "中端中型币种",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "XCN",
+    "tf": "5m",
+    "group": "中端中型币种",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "XCN",
+    "tf": "15m",
+    "group": "中端中型币种",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "H",
+    "tf": "1m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "H",
+    "tf": "5m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "H",
+    "tf": "15m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "VELVET",
+    "tf": "1m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "VELVET",
+    "tf": "5m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "VELVET",
+    "tf": "15m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "BEAT",
+    "tf": "1m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "BEAT",
+    "tf": "5m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "BEAT",
+    "tf": "15m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "COAI",
+    "tf": "1m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "COAI",
+    "tf": "5m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  },
+  {
+    "coin": "COAI",
+    "tf": "15m",
+    "group": "高波动妖币",
+    "hyperopt": {
+      "status": "DRY",
+      "best_params": {},
+      "elapsed_sec": 0
+    },
+    "backtest": {
+      "status": "SKIPPED"
+    }
+  }
+]

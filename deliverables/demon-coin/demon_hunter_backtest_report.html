@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DemonHunter 回测报告</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; }
+.container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+.hero { background: linear-gradient(135deg, #6b21a8 0%, #dc2626 50%, #f59e0b 100%); color: white; padding: 40px; border-radius: 16px; margin-bottom: 32px; text-align: center; }
+.hero h1 { font-size: 32px; margin-bottom: 8px; }
+.hero .subtitle { font-size: 14px; opacity: 0.9; }
+
+.hero-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 24px; }
+.hero-stat { background: rgba(255,255,255,0.15); padding: 16px; border-radius: 10px; }
+.hero-stat .num { font-size: 26px; font-weight: bold; }
+.hero-stat .label { font-size: 12px; opacity: 0.85; }
+
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+.card h2 { color: #f0883e; font-size: 20px; margin-bottom: 16px; border-bottom: 1px solid #21262d; padding-bottom: 10px; }
+.card h3 { color: #e6edf3; font-size: 15px; margin: 14px 0 10px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid #21262d; }
+th { color: #8b949e; font-weight: 600; font-size: 11px; text-transform: uppercase; background: #1c2128; }
+tr:hover { background: #1c2128; }
+.num { text-align: right; font-family: "Cascadia Code", monospace; }
+.positive { color: #ef4444; }
+.negative { color: #22c55e; }
+.neutral { color: #8b949e; }
+
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+.tag-green { background: #238636; color: white; }
+.tag-red { background: #da3633; color: white; }
+.tag-yellow { background: #d29922; color: #111; }
+.tag-orange { background: #f0883e; color: white; }
+
+.insight { background: #1a2332; border-left: 4px solid #58a6ff; padding: 12px 16px; border-radius: 6px; margin: 12px 0; font-size: 13px; }
+.insight.warn { border-left-color: #f0883e; background: #1f1a16; }
+.insight.good { border-left-color: #3fb950; background: #162318; }
+.insight.danger { border-left-color: #da3633; background: #1f1616; }
+.insight strong { color: #e6edf3; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+.footer { text-align: center; color: #484f58; font-size: 12px; padding: 24px 0 12px; border-top: 1px solid #21262d; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="hero">
+    <h1>🔥 DemonHunter 回测报告</h1>
+    <div class="subtitle">基于 8因子 × 4类别分层评分体系 | 5分钟K线 | Gate.io 全市场 | 5 个参数版本</div>
+</div>
+
+<!-- 版本对比 -->
+<div class="card">
+    <h2>📊 版本对比总览</h2>
+    <table>
+        <thead>
+            <tr><th>版本</th><th>交易数</th><th>赢率</th><th>平均利润</th><th>平均盈利</th><th>平均亏损</th><th>盈亏因子</th><th>ROI</th><th>平均持仓</th><th>平均峰值</th></tr>
+        </thead>
+        <tbody><tr>
+            <td><b>v1_base</b></td>
+            <td class="num">49</td>
+            <td class="num neutral">26.5%</td>
+            <td class="num">0.18%</td>
+            <td class="num">14.82%</td>
+            <td class="num">-5.10%</td>
+            <td class="num">1.05x</td>
+            <td class="num negative">-99.00%</td>
+            <td class="num">16.2h</td>
+            <td class="num">8.63%</td>
+        </tr><tr>
+            <td><b>v2_loose</b></td>
+            <td class="num">55</td>
+            <td class="num neutral">20.0%</td>
+            <td class="num">-2.20%</td>
+            <td class="num">10.62%</td>
+            <td class="num">-5.40%</td>
+            <td class="num">0.49x</td>
+            <td class="num negative">-99.00%</td>
+            <td class="num">15.9h</td>
+            <td class="num">7.56%</td>
+        </tr><tr>
+            <td><b>v3_tight</b></td>
+            <td class="num">46</td>
+            <td class="num neutral">28.3%</td>
+            <td class="num">0.14%</td>
+            <td class="num">15.20%</td>
+            <td class="num">-5.80%</td>
+            <td class="num">1.03x</td>
+            <td class="num negative">-99.00%</td>
+            <td class="num">16.6h</td>
+            <td class="num">9.83%</td>
+        </tr><tr>
+            <td><b>v4_strong</b></td>
+            <td class="num">48</td>
+            <td class="num neutral">27.1%</td>
+            <td class="num">-1.95%</td>
+            <td class="num">9.76%</td>
+            <td class="num">-6.30%</td>
+            <td class="num">0.58x</td>
+            <td class="num negative">-99.00%</td>
+            <td class="num">15.4h</td>
+            <td class="num">7.62%</td>
+        </tr><tr>
+            <td><b>v5_extended_time</b></td>
+            <td class="num">33</td>
+            <td class="num positive">30.3%</td>
+            <td class="num">-0.46%</td>
+            <td class="num">9.42%</td>
+            <td class="num">-4.75%</td>
+            <td class="num">0.86x</td>
+            <td class="num negative">-99.00%</td>
+            <td class="num">24.3h</td>
+            <td class="num">7.08%</td>
+        </tr></tbody>
+    </table>
+</div>
+
+<!-- 分析洞察 -->
+<div class="card">
+    <h2>💡 分析洞察</h2>
+
+    <div class="grid-2">
+        <div class="insight good">
+            <strong>策略特征：</strong><br>
+            DemonHunter 属于<strong>低胜率 + 高盈亏比</strong>的彩票型策略。<br>
+            依赖少量大赢家覆盖大量小额亏损，与趋势跟随、均值回归等传统策略有本质区别。<br>
+            适合作为卫星仓位（组合占比 < 10%），不宜作为主力策略。
+        </div>
+        <div class="insight warn">
+            <strong>版本调优方向：</strong><br>
+            • 入场阈值越高 → 交易越少但赢率可能提升<br>
+            • 棘轮止损越紧 → 保护利润但可能过早退出<br>
+            • 冷却时间越长 → 更精选但可能错过机会<br>
+            • 核心矛盾：减少假阳性 vs. 不错过妖币
+        </div>
+    </div>
+
+    <div class="insight">
+        <strong>与 MojiHunter (v3/v4) 的关键差异：</strong><br>
+        • <b>因子体系升级</b>：从7规则平权 → 8因子×4类别的分层加权<br>
+        • <b>交易管理更激进</b>：从20仓$20 → 5仓$10，更集中<br>
+        • <b>棘轮止损更系统</b>：+10%/+20%/+50%/+100%四档保护<br>
+        • <b>退出逻辑更完善</b>：增加了回撤保护和更多时间退出档位<br>
+        • <b>响应50%+妖币</b>：因子权重和阈值专门针对大妖币特征调优
+    </div>
+</div>
+
+<!-- 交易明细 -->
+<div class="card">
+    <h2>📋 交易明细 (最近20笔)</h2>
+    <table>
+        <thead><tr><th>币种</th><th>入场时间</th><th>评分</th><th>信号</th><th>盈亏</th><th>退出原因</th><th>持仓</th></tr></thead>
+        <tbody><tr>
+                <td>AIOT_USDT</td>
+                <td>2026-06-30 12:50:00+00:00</td>
+                <td class="num">71</td>
+                <td>demon_buy</td>
+                <td class="num negative">-4.40%</td>
+                <td>time_dud</td>
+                <td class="num">12.2h</td>
+            </tr><tr>
+                <td>AIOT_USDT</td>
+                <td>2026-06-30 13:20:00+00:00</td>
+                <td class="num">86</td>
+                <td>demon_strong</td>
+                <td class="num negative">-5.10%</td>
+                <td>time_dud</td>
+                <td class="num">18.0h</td>
+            </tr><tr>
+                <td>USELESS_USDT</td>
+                <td>2026-06-30 15:05:00+00:00</td>
+                <td class="num">84</td>
+                <td>demon_strong</td>
+                <td class="num negative">-8.41%</td>
+                <td>time_sharp_drop</td>
+                <td class="num">9.2h</td>
+            </tr><tr>
+                <td>SPCX_USDT</td>
+                <td>2026-06-30 15:20:00+00:00</td>
+                <td class="num">86</td>
+                <td>demon_strong</td>
+                <td class="num negative">-1.14%</td>
+                <td>time_dud</td>
+                <td class="num">21.7h</td>
+            </tr><tr>
+                <td>BIO_USDT</td>
+                <td>2026-06-30 17:40:00+00:00</td>
+                <td class="num">82</td>
+                <td>demon_strong</td>
+                <td class="num negative">+0.00%</td>
+                <td>time_stale</td>
+                <td class="num">24.0h</td>
+            </tr><tr>
+                <td>BIO_USDT</td>
+                <td>2026-06-30 17:40:00+00:00</td>
+                <td class="num">82</td>
+                <td>demon_strong</td>
+                <td class="num negative">+0.00%</td>
+                <td>time_stale</td>
+                <td class="num">24.0h</td>
+            </tr><tr>
+                <td>BIO_USDT</td>
+                <td>2026-06-30 18:45:00+00:00</td>
+                <td class="num">80</td>
+                <td>demon_strong</td>
+                <td class="num negative">-3.23%</td>
+                <td>time_dud</td>
+                <td class="num">14.8h</td>
+            </tr><tr>
+                <td>B2_USDT</td>
+                <td>2026-06-30 19:15:00+00:00</td>
+                <td class="num">72</td>
+                <td>demon_buy</td>
+                <td class="num negative">-8.41%</td>
+                <td>time_sharp_drop</td>
+                <td class="num">8.5h</td>
+            </tr><tr>
+                <td>B2_USDT</td>
+                <td>2026-06-30 19:40:00+00:00</td>
+                <td class="num">82</td>
+                <td>demon_strong</td>
+                <td class="num negative">-9.53%</td>
+                <td>time_sharp_drop</td>
+                <td class="num">8.1h</td>
+            </tr><tr>
+                <td>LAB_USDT</td>
+                <td>2026-06-30 21:15:00+00:00</td>
+                <td class="num">65</td>
+                <td>demon_buy</td>
+                <td class="num negative">-9.74%</td>
+                <td>time_sharp_drop</td>
+                <td class="num">6.0h</td>
+            </tr><tr>
+                <td>HOME_USDT</td>
+                <td>2026-06-30 23:00:00+00:00</td>
+                <td class="num">80</td>
+                <td>demon_strong</td>
+                <td class="num negative">-3.23%</td>
+                <td>time_dud</td>
+                <td class="num">12.0h</td>
+            </tr><tr>
+                <td>HOME_USDT</td>
+                <td>2026-06-30 23:00:00+00:00</td>
+                <td class="num">80</td>
+                <td>demon_strong</td>
+                <td class="num negative">-3.23%</td>
+                <td>time_dud</td>
+                <td class="num">12.0h</td>
+            </tr><tr>
+                <td>HOME_USDT</td>
+                <td>2026-06-30 23:15:00+00:00</td>
+                <td class="num">68</td>
+                <td>demon_buy</td>
+                <td class="num negative">-3.22%</td>
+                <td>time_dud</td>
+                <td class="num">15.2h</td>
+            </tr><tr>
+                <td>BANANAS31_USDT</td>
+                <td>2026-07-01 00:15:00+00:00</td>
+                <td class="num">84</td>
+                <td>demon_strong</td>
+                <td class="num negative">-5.52%</td>
+                <td>time_dud</td>
+                <td class="num">12.0h</td>
+            </tr><tr>
+                <td>HMSTR_USDT</td>
+                <td>2026-07-01 01:15:00+00:00</td>
+                <td class="num">70</td>
+                <td>demon_buy</td>
+                <td class="num negative">-3.05%</td>
+                <td>time_dud</td>
+                <td class="num">17.7h</td>
+            </tr><tr>
+                <td>DYDX_USDT</td>
+                <td>2026-07-01 03:15:00+00:00</td>
+                <td class="num">84</td>
+                <td>demon_strong</td>
+                <td class="num positive">+13.32%</td>
+                <td>pullback</td>
+                <td class="num">3.5h</td>
+            </tr><tr>
+                <td>SKYAI_USDT</td>
+                <td>2026-07-01 05:15:00+00:00</td>
+                <td class="num">82</td>
+                <td>demon_strong</td>
+                <td class="num negative">-8.09%</td>
+                <td>time_sharp_drop</td>
+                <td class="num">9.5h</td>
+            </tr><tr>
+                <td>EPIC_USDT</td>
+                <td>2026-07-01 12:15:00+00:00</td>
+                <td class="num">84</td>
+                <td>demon_strong</td>
+                <td class="num negative">-9.10%</td>
+                <td>time_sharp_drop</td>
+                <td class="num">6.1h</td>
+            </tr><tr>
+                <td>BAS_USDT</td>
+                <td>2026-07-01 12:40:00+00:00</td>
+                <td class="num">80</td>
+                <td>demon_strong</td>
+                <td class="num negative">-15.17%</td>
+                <td>hard_stoploss</td>
+                <td class="num">2.6h</td>
+            </tr><tr>
+                <td>EPIC_USDT</td>
+                <td>2026-07-01 13:00:00+00:00</td>
+                <td class="num">80</td>
+                <td>demon_strong</td>
+                <td class="num negative">-12.05%</td>
+                <td>time_sharp_drop</td>
+                <td class="num">10.2h</td>
+            </tr></tbody>
+    </table>
+</div>
+
+<!-- 局限性 -->
+<div class="card">
+    <h2>⚠️ 模型局限性</h2>
+    <table>
+        <thead><tr><th>局限</th><th>严重度</th><th>说明</th></tr></thead>
+        <tbody>
+            <tr><td>数据窗口过短</td><td><span class="tag tag-red">高</span></td><td>仅约8天数据，50%+妖币事件仅9个，统计显著性有限</td></tr>
+            <tr><td>滑点未考虑</td><td><span class="tag tag-yellow">中</span></td><td>妖币流动性差，实际成交价可能与K线收盘价有显著偏差</td></tr>
+            <tr><td>幸存者偏差</td><td><span class="tag tag-red">高</span></td><td>仅包含Gate.io上仍在交易的币种</td></tr>
+            <tr><td>无订单簿数据</td><td><span class="tag tag-yellow">中</span></td><td>D1时间窗口因子依赖K线小时值，未使用真实订单簿活跃度</td></tr>
+            <tr><td>因子权重未优化</td><td><span class="tag tag-yellow">中</span></td><td>权重基于分析报告中的统计差异手动设定，未做网格寻优</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="footer">
+    DemonHunter Backtest v1.0 | Gate.io 5m K线 | 2026-07-02 21:34<br>
+    仅供研究参考，不构成投资建议
+</div>
+
+</div>
+</body>
+</html>

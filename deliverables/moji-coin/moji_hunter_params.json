@@ -1,0 +1,55 @@
+{
+  "detector": {
+    "R1_vol_ratio": {
+      "threshold": 2.0,
+      "weight": 25
+    },
+    "R2_sma_slope": {
+      "threshold": 1.5,
+      "weight": 25
+    },
+    "R3_cum_change": {
+      "threshold": 3.0,
+      "weight": 25
+    },
+    "R4_range_pct": {
+      "threshold": 8.0,
+      "weight": 15
+    },
+    "R5_range_ratio": {
+      "threshold": 1.3,
+      "weight": 10
+    },
+    "R6_stair_score": {
+      "threshold": 0.8,
+      "weight": 0
+    },
+    "R7_vol_stair": {
+      "threshold": 0.6,
+      "weight": 0
+    },
+    "score_threshold": 70,
+    "min_rules": 2
+  },
+  "trade": {
+    "stake_per_trade": 1.0,
+    "max_open_trades": 20,
+    "total_capital": 20.0,
+    "stoploss_pct": -0.1,
+    "commission_pct": 0.002,
+    "max_hold_hours": 72,
+    "dud_early_hours": 8,
+    "dud_half_day_hours": 12,
+    "dud_1day_hours": 24,
+    "dud_2day_hours": 48,
+    "ratchet_10pct_protect": 0.0,
+    "ratchet_20pct_protect": 0.1,
+    "ratchet_50pct_protect": 0.25,
+    "ratchet_100pct_protect": 0.5,
+    "pullback_drawdown": 0.12,
+    "pullback_min_profit": 0.08,
+    "pullback_peak_min": 0.15,
+    "global_cooldown_min": 120,
+    "min_quote_volume_24h": 50000
+  }
+}
