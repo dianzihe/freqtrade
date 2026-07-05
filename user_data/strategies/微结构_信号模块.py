@@ -383,13 +383,24 @@ def _top10_depth(df: pd.DataFrame) -> pd.Series:
 
     total = _series_from_columns(
         df,
-        ["top10_depth", "depth_10", "total_depth_10", "l2_total_depth_10", "lob_total_depth"],
+        [
+            "total_depth",
+            "top10_depth",
+            "depth_10",
+            "total_depth_10",
+            "l2_total_depth_10",
+            "lob_total_depth",
+        ],
     )
     if total is not None:
         return total.fillna(0.0)
 
-    bid_depth = _series_from_columns(df, ["bid_depth_10", "bids_depth_10", "l2_bid_depth_10"])
-    ask_depth = _series_from_columns(df, ["ask_depth_10", "asks_depth_10", "l2_ask_depth_10"])
+    bid_depth = _series_from_columns(
+        df, ["bid_depth", "bid_depth_10", "bids_depth_10", "l2_bid_depth_10"]
+    )
+    ask_depth = _series_from_columns(
+        df, ["ask_depth", "ask_depth_10", "asks_depth_10", "l2_ask_depth_10"]
+    )
     if bid_depth is not None and ask_depth is not None:
         return bid_depth.fillna(0.0) + ask_depth.fillna(0.0)
 

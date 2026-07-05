@@ -47,13 +47,19 @@
         "secret": "",
         "ccxt_config": {
             "enableRateLimit": true,
+            "proxies": {
+                "http": "http://127.0.0.1:7890",
+                "https": "http://127.0.0.1:7890"
+            },
             "options": {
                 "defaultType": "swap"   // 永续 swap; 与 gate_oco 里的 defaultType 一致
             }
         },
         "ccxt_async_config": {
-            "enableRateLimit": true
+            "enableRateLimit": true,
+            "aiohttp_proxy": "http://127.0.0.1:7890"
         },
+        "enable_ws": false,
         // 白名单: 核心篮子(BTC/ETH) + 卫星篮子。
         // ⚠️ gate_oco.reconcile_orphans 按此白名单逐个 fetch_open_orders;
         //    若中途移除某 pair, 其孤儿括号单将扫不到 → 改白名单后手动核对一次。

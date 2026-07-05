@@ -65,8 +65,11 @@ from freqtrade.strategy import (
 
 # 这两个文件即附件；按你的工程实际模块路径调整 import
 from gate_oco import GateOCOFailsafeMixin
-# from Meme_马丁_基类 import MemeMartingaleBaseStrategy   # 文件名含中文时建议改成英文模块名
-from Meme_martingale_base import MemeMartingaleBaseStrategy
+# 使用中文文件名导入完整基类（含 BB/ATR_SPIKE_BLOCK/range_position/ema_slope 等完整参数）
+try:
+    from Meme_马丁_基类 import MemeMartingaleBaseStrategy
+except ImportError:
+    from meme_martingale_base import MemeMartingaleBaseStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -218,44 +221,32 @@ class MemeLimitedMartingaleStrategy(GateOCOFailsafeMixin, MemeMartingaleBaseStra
     # 动态止损修正版（覆盖基类 Bug#2、Bug#3）
     # =====================================================================
     def custom_stoploss(self, pair: str, trade: Trade, current_time: datetime,
-                        current_rate: float, current_profit: float,
-                        after_fill: bool, **kwargs) -> Optional[float]:
-        """
-        修正要点：
-        (A) freqtrade 传入的 current_profit 是【含杠杆】的收益率(price_move * leverage)，
-            而 stoploss/阈值常按"价格变动"思考。这里统一先还原成价格层面 price_profit，
-            让中断阈值与杠杆解耦——否则阈值的真实触发点会随杠杆漂移(见第四节)。
-        (B) 基类用 `return current_profit * 0.5` 做移动止盈是错误的：
-            custom_stoploss 的返回值是【相对现价的止损比例】，传正数会把止损设到现价
-            上方→对多头瞬间触发；必须用 stoploss_from_open() 正确换算。
-        """
-        lev = max(getattr(trade, "leverage", 1.0) or 1.0, 1.0)
-        price_profit = current_profit / lev  # 还原为价格层面收益率
-        filled = trade.nr_of_successful_entries
+                            current_rate: float, current_profit: float,
+                            after_fill: bool, **kwargs) -> Optional[float]:
+            lev = max(getattr(trade, "leverage", 1.0) or 1.0, 1.0)
+            price_profit = current_profit / lev
+            filled = trade.nr_of_successful_entries
 
-        # --- 马丁中断平仓：加仓耗尽 + 价格继续深跌 → 市价砍仓保命 ---
-        # 这是全策略最关键的一行风控：阻断"越跌越买直到爆仓"。
-        if filled > self.dca_max_entries.value:
-            interrupt_price = -(self.dca_step_pct.value * self.dca_max_entries.value
-                                + self.DCA_INTERRUPT_EXTRA_LOSS)  # 价格层面阈值
-            if price_profit < interrupt_price:
-                logger.warning("[%s] 马丁中断平仓 price_profit=%.3f (lev=%.1f)",
-                               pair, price_profit, lev)
-                return 0.0001  # 贴近现价 → stoploss=market 立即离场(保命优先)
+            if filled > self.dca_max_entries.value:
+                interrupt_price = -(self.dca_step_pct.value * self.dca_max_entries.value
+                                    + self.DCA_INTERRUPT_EXTRA_LOSS)
+                breached = price_profit < interrupt_price
+                # L1+L5: 要求条件持续确认 + 盘口非异常放大才真正执行；
+                # 硬止损兜底场景才允许 bypass_depth_check(保命优先)。
+                if self.risk_gate(trade, "dca_interrupt", breached, current_time,
+                                confirm_seconds=self.default_confirm_seconds):
+                    logger.warning("[%s] 马丁中断平仓(已过L1确认+L5熔断) price_profit=%.3f (lev=%.1f)",
+                                pair, price_profit, lev)
+                    return 0.0001
 
-        # --- 移动止盈锁利：盈利达标后，把止损上移到"已实现一半利润"处 ---
-        if price_profit > self.take_profit_pct.value:
-            new_sl = stoploss_from_open(
-                current_profit * 0.5,   # 锁定当前(含杠杆)利润的一半
-                current_profit,
-                is_short=trade.is_short,
-                leverage=lev,
-            )
-            # stoploss_from_open 在极端情况下可能返回 0；返回 None 退回硬止损更安全
-            return new_sl if new_sl and new_sl != 0 else None
+            if price_profit > self.take_profit_pct.value:
+                new_sl = stoploss_from_open(
+                    current_profit * 0.5, current_profit,
+                    is_short=trade.is_short, leverage=lev,
+                )
+                return new_sl if new_sl and new_sl != 0 else None
 
-        return None  # 其余维持硬止损(基类 stoploss，建议改深，见 Bug#3)
-
+            return None
     # =====================================================================
     # 开仓闸门修正版（覆盖基类 Bug#1：避免误杀 DCA 加仓）
     # =====================================================================

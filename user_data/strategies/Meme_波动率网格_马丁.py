@@ -1,84 +1,216 @@
 # -*- coding: utf-8 -*-
 """
-Meme 波动率网格马丁策略（工程化重构版）
+================================================================================
+策略名称：波动率网格马丁 (Meme Volatility Grid Martingale)
+================================================================================
 
-核心逻辑：基于布林带下轨 + ATR 宽度判断"可交易的超卖区间"，
-做均值回归——而不是假设每次暴跌都会恢复。所有风控、加仓、熔断在基类。
-=============================================================
-交易标的：妖币（Meme）永续合约 / 主流币
-适合行情：宽幅震荡 / 区间盘整（有波动但无单边趋势）
-失效行情：单边瀑布、流动性枯竭、趋势性下跌（此时均值回归假设失效，靠基类的
-         "马丁中断平仓 + ATR爆炸禁加仓 + 趋势过滤"来止血）
-方向：多空双向（永续），现货自动降级为仅做多
-持仓风格：波段（时间止损默认 48h）
-方向偏好：以做多超卖反弹为主
+【交易标的】
+    Gate.io 永续合约，主要面向"妖币/Meme 币"（DOGE、PEPE、WIF 这类高波动、
+    无基本面锚、情绪驱动的合约）。也可跑主流币，但主流币波动小、区间回归弱，
+    这套逻辑的边际收益不高，真正的设计目标就是高波动品种的区间震荡。
 
-参数名                 | 含义               | 默认值   | 建议调优范围    | 影响
-buy_atr_pct_min        | 入场最低波动率     | 0.006    | 0.003-0.020     | 太低进死盘无利润；太高只在剧烈波动入场，信号少
-buy_rsi_max            | 入场 RSI 上限      | 35       | 20-45           | 越低越严格，信号越少但质量越高
-dca_max_entries        | 最大加仓次数       | 3        | 1-4             | 风险核心：越大摊薄能力越强，但单边时亏损放大越快
-dca_step_pct           | 加仓阶梯跌幅       | 0.06     | 0.04-0.12       | 越小加仓越频繁（弹药消耗快）；越大加仓更稀疏更稳
-dca_cooldown_min       | 加仓冷却分钟       | 45       | 15-120          | 防瀑布连续踩刀，越大越保守
-sell_rsi_min           | 止盈 RSI 阈值      | 62       | 55-75           | 越高持仓越久博更高回归，但回吐风险增
-take_profit_pct        | 目标止盈           | 0.04     | 0.02-0.10       | 越小胜率高单笔薄；越大单笔厚但常吃不到
-time_stop_candles      | 时间止损 K 线数    | 192      | 48-288          | 越小越快释放套牢资金，但易在回归前被止损
-base_leverage          | 基础杠杆           | 3        | 1-6（结构性）   | 直接放大盈亏与爆仓概率，已被波动率动态压制
-MAX_OPEN_TRADES_HARD   | 最大持仓（硬）     | 20       | 不可调          | 控制总敞口
-RESERVE_MARGIN_RATIO   | 预留保证金（硬）   | 0.30     | 不可调          | 安全垫，防爆仓
-DAILY_DRAWDOWN_LIMIT   | 单日回撤熔断（硬） | 0.30     | 不可调          | 触发冷静期
+【核心逻辑 —— 为什么这样写】
+    本质是"区间回归 + 马丁摊薄"的组合，而不是趋势跟随：
+      1. 入场：用 RSI 极值 + 偏离 EMA50 判断价格到了区间的上/下沿，
+         做逆势单（超卖做多、超买做空），赌它回归中轨。
+      2. 加仓：价格继续朝不利方向走时，按固定步长(dca_step_pct)分档补仓，
+         每档仓位按 dca_size_mult 放大，摊低均价——这就是马丁格尔。
+         目的：只要价格在区间内最终回归，即使入场点不完美也能靠摊薄回本止盈。
+      3. 止盈：不贪。盈利到 take_profit_pct 就用移动止损锁定一半利润，
+         或 RSI 回到中性区(populate_exit_trend)主动离场。区间策略吃的是
+         "反复的小波动"，不是"一波大行情"，所以止盈必须早、必须落袋。
 
+    为什么用逆势而不用顺势？
+        Meme 币在没有消息面时，绝大多数时间是无序高频震荡，顺势追单极易被
+        插针打脸。区间回归在"震荡市"胜率显著更高。代价是——一旦转单边趋势，
+        逆势 + 马丁会同时放大亏损（见文末风险节，这是本策略的致命面）。
 
+【适合行情】
+    ✅ 高波动的横盘震荡 / 宽幅区间          → 主战场，马丁摊薄优势最大
+    ⚠️ 低波动窄幅震荡                       → 能盈利但效率低，手续费吃利润
+    ❌ 单边趋势（尤其是瀑布式下跌 / 逼空）  → 策略失效区，会连续加仓直到中断线砍仓
+    ❌ 流动性枯竭 / 跳空                     → 滑点与强平风险剧增
+
+【周期 (timeframe)】
+    15m。为什么不是 1m/5m？
+        - 1m/5m 上 RSI 极值信号噪声太大，假信号多，马丁会被频繁触发加仓，
+          资金利用率和手续费都难看。
+        - 15m 在"信号质量"与"响应速度"之间平衡，一根 K 线 15 分钟，
+          区间回归有足够时间发生，又不至于像 1h 那样反应迟钝错过离场。
+        - 注意：中断/强平的即时性不依赖 15m 主周期，而是靠交易所端 OCO
+          条件单实时触发（见 GateOCOFailsafeMixin），主周期慢不影响保命。
+
+【方向】
+    多空双向 (can_short=True)。震荡区间上下沿都是机会，只做多会浪费上沿的
+    做空机会，而且单边只做多在下跌趋势里死得更惨。
+
+【持仓风格】
+    日内到短波段。区间回归通常在数根到数十根 15m K 线内完成（几小时到 1~2 天）。
+    如果一笔持仓超过 2~3 天还没回归，往往意味着"区间假设已经破了"——
+    这正是最危险的状态，此时马丁已加满仓，只能等中断线砍仓。
+
+【止盈止损想法 —— 为什么这样设计】
+    止盈：分层。移动止损锁半利 + RSI 回中轨主动离场。区间策略的利润来自
+         高频小胜，不能等大行情，早止盈是刻意的。
+    止损：不用固定百分比止损，而是"马丁中断线"。
+         逻辑是：加仓期间不认赔（这是马丁的前提），但加仓次数一旦耗尽
+         (超过 dca_max_entries) 且价格继续深跌到中断线，就市价砍仓认赔。
+         中断线 = 满仓总回撤 + 余量，并被"强平安全线"强制收紧
+         (见 RiskExtMixin._safe_interrupt_level)，确保永远先于交易所强平触发。
+    双保险：交易所端挂 OCO 括号单(TP+SL)，即使 bot 进程崩溃，止损仍在交易所侧生效。
+
+================================================================================
+                        ⚠️  资金安全与失效场景（务必读完）  ⚠️
+================================================================================
+    见文件末尾 __doc__ 之外的详细风险注释块。核心一句话：
+    马丁格尔的收益曲线是"长期缓慢爬升 + 偶发断崖式归零"。它不是"稳"，
+    是"把亏损延后并集中到一次爆发"。用它必须接受"某天可能单笔吃掉数月利润"。
+================================================================================
 """
 
+from datetime import datetime
+from typing import Optional
+
 from pandas import DataFrame
+from freqtrade.persistence import Trade
 
 from gate_oco import GateOCOFailsafeMixin
-from Meme_马丁_基类 import MemeMartingaleBaseStrategy
+from risk_ext import RiskExtMixin
+# 使用中文文件名导入完整基类（含 BB/ATR_SPIKE_BLOCK 等完整参数）
+try:
+    from Meme_马丁_基类 import MemeMartingaleBaseStrategy
+except ImportError:
+    from meme_martingale_base import MemeMartingaleBaseStrategy
 
 
-class MemeVolatilityGridMartingaleStrategy(GateOCOFailsafeMixin, MemeMartingaleBaseStrategy):
-    """波动率网格马丁：交易区间回归，不赌每次都反弹。"""
+class MemeVolatilityGridMartingaleStrategy(
+        GateOCOFailsafeMixin, RiskExtMixin, MemeMartingaleBaseStrategy):
+    """
+    组合顺序 (MRO)：OCO故障保护 → 风控扩展 → 马丁基类 → IStrategy
+    为什么是这个顺序：
+        OCO 钩子要最先介入订单生命周期；风控扩展(取价/强平校验)次之，
+        供基类的加仓/止损逻辑调用；基类兜底核心马丁逻辑。三层的 __init__
+        都调 super()，链路完整。
+    """
 
-    # 子策略可覆盖部分参数（其余继承基类）
     dca_tag_prefix = "vol_grid_dca"
 
-    # 交易所端 OCO 失效保险；具体挂单/清理/对账逻辑集中在 gate_oco.py。
+    # ================== OCO 交易所端故障保护参数 ==================
     oco_enabled = True
-    oco_tp_pct = 0.06
+    # 止盈距离(占均价)。调优：6%→8%，妖币区间振幅大，6%太早止盈截断利润。
+    oco_tp_pct = 0.08
+    # SL 相对"中断线"的缓冲倍数。为什么 >1：交易所端 SL 是最后防线，
+    # 要略宽于 bot 内部中断线，避免两者同时抢触发导致重复/冲突平仓。
     oco_sl_buffer = 1.15
 
+    # ================== 回测风控参数 ==================
+    # 悲观滑点。为什么 0.5%：Meme 币盘口薄，市价加仓/中断砍仓的实际成交
+    # 常比理论价差 0.3~1%。回测不建模滑点会严重高估收益。做敏感性测试时
+    # 把它调到 1% 再跑一遍，若策略在 1% 滑点下就亏，实盘几乎必亏。
+    SLIPPAGE_PCT = 0.005
+    # 维持保证金率。gate Meme 档位保守取 0.5%，用于回测估算强平价。
+    # 实盘会被真实 liquidationPrice 覆盖，此值仅回测兜底。
+    MAINTENANCE_MARGIN_RATE = 0.005
+
+    # ★★★ 关键修复：启用 OCO 时必须关掉交易所原生 stoploss ★★★
+    # 为什么：若同时开 stoploss_on_exchange=True 和 OCO 的 SL 条件单，
+    # 交易所端会存在两条止损单，一条触发后另一条变成"裸露的反向单"，
+    # 可能被误当成开仓单执行，造成反向持仓。二者只能留一个，这里选 OCO。
+    order_types = {
+        **MemeMartingaleBaseStrategy.order_types,
+        "stoploss_on_exchange": False,
+    }
+
+    # ------------------------------------------------------------------
     def populate_entry_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        dataframe = super().populate_entry_trend(dataframe, metadata)
+        dataframe["enter_long"] = 0
+        dataframe["enter_short"] = 0
 
-        # 条件1：波动率足够（太死的盘没回归空间，也赚不到价差）
-        wide_enough = dataframe["atr_pct"] > self.buy_atr_pct_min.value
-        # 条件2：跌破布林下轨（超卖）。用收盘价比较，process_only_new_candles 保证无未来函数
-        lower_band_touch = dataframe["close"] < dataframe["bb_lower"]
-        # 条件3：还在区间内（0.12~0.72），不在最底部——已跌穿区间底说明可能转单边，不接
-        range_not_dead = dataframe["range_position"].between(0.12, 0.72)
-        # 条件4：RSI 超卖确认（增加信号质量，过滤假触碰）
-        rsi_oversold = dataframe["rsi"] < self.buy_rsi_max.value
-        # 条件5：非下跌趋势（趋势过滤，马丁绝不在下跌趋势里抄底）
-        not_downtrend = dataframe["ema_slope"] > -0.01
-        # 条件6：ATR 未爆炸（不在瀑布里接刀）
-        no_atr_spike = dataframe["atr_ratio"] < self.ATR_SPIKE_BLOCK
+        # --- 调优v2 核心改进 ---
+        # 1) ATR 过滤改用 atr_ratio（相对均值倍数）替代绝对值：
+        #    原版 atr_pct < dca_step*2=0.12 把高波动行情全过滤了——
+        #    但妖币正常波动时 atr_pct 就有 0.08~0.15，策略设计目标恰恰是高波动。
+        #    改用 atr_ratio < 2.5 区分"正常高波动"和"异常爆炸"（瀑布/逼空）
+        # 2) 增加趋势过滤：EMA 斜率方向化，不在强趋势中逆势入场
+        #    原版只在 DCA 加仓时做趋势过滤，入场时没有，导致在单边趋势中频繁开仓
+        # 3) RSI 保持 30/70 不变：妖币 RSI 确实少到 30 以下，但放宽到 35 会引入
+        #    更多趋势中的假信号，得不偿失。改用 ATR ratio 放宽即可。
+        long_cond = (
+            (dataframe["rsi"] < 30)
+            & (dataframe["close"] < dataframe["ema_slow"])
+            & (dataframe["atr_ratio"] < 2.5)
+            & (dataframe["ema_slope"] > -0.01)
+            & (dataframe["volume"] > 0)
+        )
+        dataframe.loc[long_cond, "enter_long"] = 1
 
-        dataframe.loc[
-            wide_enough & lower_band_touch & range_not_dead
-            & rsi_oversold & not_downtrend & no_atr_spike,
-            ["enter_long", "enter_tag"],
-        ] = (1, "vol_grid_lower_band")
-
+        # --- 做空：区间上沿超买（镜像逻辑）---
+        short_cond = (
+            (dataframe["rsi"] > 70)
+            & (dataframe["close"] > dataframe["ema_slow"])
+            & (dataframe["atr_ratio"] < 2.5)
+            & (dataframe["ema_slope"] < 0.01)
+            & (dataframe["volume"] > 0)
+        )
+        dataframe.loc[short_cond, "enter_short"] = 1
         return dataframe
 
     def populate_exit_trend(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
-        dataframe = super().populate_exit_trend(dataframe, metadata)
-
-        # 均值回归止盈：价格回到布林中轨 或 RSI 转强 → 离场
-        dataframe.loc[
-            (dataframe["close"] > dataframe["bb_mid"])
-            | (dataframe["rsi"] > self.sell_rsi_min.value),
-            ["exit_long", "exit_tag"],
-        ] = (1, "vol_grid_mean_exit")
-
+        dataframe["exit_long"] = 0
+        dataframe["exit_short"] = 0
+        # 调优v3：RSI 回中轨阈值 60/40→57/43，在"让利润多跑"和"落袋为安"之间取平衡。
+        # 60/40 对低波动币种（XCN/BEAT）太宽，小赢被回吐变亏损；
+        # 55/45 对高波动币种（VELVET/H）太紧，大利润被截断。
+        # 57/43 是折中：比原版稍宽让利润跑，但不至于回吐太多。
+        dataframe.loc[dataframe["rsi"] > 57, "exit_long"] = 1
+        dataframe.loc[dataframe["rsi"] < 43, "exit_short"] = 1
         return dataframe
+
+    # ==================================================================
+    # OCO 生命周期挂钩 —— 为什么每个钩子都要有
+    # ==================================================================
+    def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
+        # 每轮轮询对账：交易所端某一腿(TP/SL)触发后，主动撤掉另一腿。
+        # 为什么必须做：gate 的两条独立条件单不是原生 OCO，一腿成交后
+        # 另一腿不会自动取消，不撤就会变成裸单。用 try 包裹是因为对账失败
+        # 不应中断主循环（下一轮会重试）。
+        try:
+            self.sync_brackets()
+        except Exception:
+            pass
+
+    def bot_start(self, **kwargs) -> None:
+        # 启动时对账：清理上次进程崩溃残留的孤儿条件单。
+        # 为什么关键：马丁场景下 bot 崩溃重启很常见，若不清理，旧的 SL/TP
+        # 单会和新挂的单叠加，重复平仓或方向错乱。
+        try:
+            self.reconcile_orphans()
+        except Exception:
+            pass
+
+    def order_filled(self, pair: str, trade: Trade, order, current_time: datetime,
+                     **kwargs) -> None:
+        # 每次入场/加仓成交后重挂括号单。
+        # 为什么：马丁加仓会改变持仓均价和数量，旧的 TP/SL 价位和数量都失效，
+        # 必须"撤旧→按新均价新数量重挂"，否则 SL 覆盖不全仓、TP 价位错位。
+        if not self.oco_enabled:
+            return
+        try:
+            if order.ft_order_side == trade.entry_side:
+                self.cancel_bracket(trade)
+                self.place_bracket(trade)
+        except Exception:
+            pass
+
+    def confirm_trade_exit(self, pair: str, trade: Trade, order_type: str,
+                           amount: float, rate: float, time_in_force: str,
+                           exit_reason: str, current_time: datetime,
+                           **kwargs) -> bool:
+        # 主动离场前先撤交易所端括号单。
+        # 为什么：bot 主动平仓后，若不撤 OCO 单，它们会成为无持仓对应的裸单，
+        # 下次价格触及时凭空开出一个反向仓位。
+        try:
+            self.cancel_bracket(trade)
+        except Exception:
+            pass
+        return True

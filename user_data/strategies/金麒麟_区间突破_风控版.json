@@ -1,0 +1,18 @@
+{
+    "trading_mode": "spot",
+    "max_open_trades": 2,
+    "stake_currency": "USDT",
+    "dry_run_wallet": 1000,
+    "fee": 0.0005, // 按目标交易所真实 taker 费填
+    "exchange": {
+        "pair_whitelist": [
+            "BTC/USDT",
+            "ETH/USDT"
+        ]
+    },
+    "unfilledtimeout": { // 限价单 N 分钟不成交作废,模拟“挂单落空”
+        "entry": 6,
+        "exit": 12,
+        "unit": "minutes"
+    }
+}

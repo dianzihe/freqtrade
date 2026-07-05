@@ -23,11 +23,15 @@ user_data/plots/*
 user_data/*.html
 user_data/*.json
 user_data/*.png
+user_data/bt_results/*
+
 freqtrade-plot.html
 freqtrade-profit-plot.html
 freqtrade/rpc/api_server/ui/*
 build_helpers/ta-lib/*
 .workbuddy/*
+.tmp/*
+deliverables/*
 # Macos related
 .DS_Store
 

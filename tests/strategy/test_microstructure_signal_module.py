@@ -73,6 +73,28 @@ def test_ch2_ch3_use_l2_depth_and_best_quote_spread_not_proxy_columns() -> None:
     assert result.loc[65, "ch3_spread_drift"] > 0.8
 
 
+def test_ch2_uses_second_level_full_book_depth_columns() -> None:
+    module = load_module()
+    df = _base_frame()
+    df = df.drop(columns=["bid_depth_10", "ask_depth_10"])
+    df["bid_depth"] = 500.0
+    df["ask_depth"] = 500.0
+    df["total_depth"] = 1000.0
+    df.loc[55:, "bid_depth"] = 60.0
+    df.loc[55:, "ask_depth"] = 40.0
+    df.loc[55:, "total_depth"] = 100.0
+
+    result = module.add_lob_regime_signals(
+        df,
+        lookback_period=10,
+        threshold_percentile=80,
+        confirmation_bars=1,
+        min_signal_strength=0.0,
+    )
+
+    assert result.loc[65, "ch2_depth_erosion"] > 0.8
+
+
 def test_ch2_ch3_extract_depth_and_spread_from_raw_l2_snapshots() -> None:
     module = load_module()
     df = _base_frame()

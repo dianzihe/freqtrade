@@ -60,14 +60,12 @@ class MemeMartingaleBaseStrategy(IStrategy):
     position_adjustment_enable = True
     startup_candle_count = 200   # 指标预热：BB(20)+ATR(14)+EMA(100)，留足 200 根防冷启动 NaN
 
-    # [FIX#3] 硬止损由 -0.25 改深为 -0.40。
-    # 原因：中断阈值/止盈都交给 custom_stoploss 精细控制；硬止损只是"兜底双保险"。
-    # 若硬止损太浅(-0.25)，在 leverage=1 时它会先于"马丁中断点"(价格约 -26%)触发，
-    # 导致中断逻辑变成永不执行的死代码。改深到 -0.40 给 custom_stoploss 留出空间。
+    # [FIX#3] 硬止损 -0.40。保持不变。
+    # 中断阈值/止盈都交给 custom_stoploss 精细控制；硬止损只是"兜底双保险"。
     stoploss = -0.40
 
-    # 默认 ROI（子类可覆盖）。用 custom_exit 做主力，ROI 仅作兜底止盈。
-    minimal_roi = {"0": 0.10}
+    # 默认 ROI（子类可覆盖）。调优v3：0.10→0.12，适度让利润多跑。
+    minimal_roi = {"0": 0.12}
 
     # [FIX#4] 滑点/挂单 + 止损上交易所端。
     # ⚠️ 与 GateOCOFailsafeMixin 同时使用时，OCO 会在交易所端另挂一条 SL 触发单，
@@ -93,14 +91,17 @@ class MemeMartingaleBaseStrategy(IStrategy):
     buy_rsi_max = IntParameter(20, 45, default=35, space="buy", optimize=True, load=True)
 
     # --- 加仓（马丁核心，调优重灾区）---
+    # dca_step_pct 保持 0.06：调优v2 曾试 0.08 但导致 DCA 触发太晚，摊薄不足。
     dca_max_entries = IntParameter(1, 4, default=3, space="buy", optimize=True, load=True)
     dca_step_pct = DecimalParameter(0.04, 0.12, default=0.06, space="buy",
                                     decimals=3, optimize=True, load=True)
     dca_cooldown_min = IntParameter(15, 120, default=45, space="buy", optimize=True, load=True)
 
     # --- 止盈止损 ---
+    # 调优v2：take_profit_pct 0.04→0.06，让移动止盈在更高位置启动。
+    #   原版 0.04 时 3x 杠杆下价格刚动 1.3% 就触发移动止盈，截断利润。
     sell_rsi_min = IntParameter(55, 75, default=62, space="sell", optimize=True, load=True)
-    take_profit_pct = DecimalParameter(0.02, 0.10, default=0.04, space="sell",
+    take_profit_pct = DecimalParameter(0.02, 0.10, default=0.06, space="sell",
                                        decimals=3, optimize=True, load=True)
     time_stop_candles = IntParameter(48, 288, default=192, space="sell",
                                      optimize=True, load=True)  # 192*15m = 48h
@@ -120,8 +121,15 @@ class MemeMartingaleBaseStrategy(IStrategy):
     CONSECUTIVE_LOSS_LIMIT = 5         # 连续亏损熔断阈值
     DAILY_DRAWDOWN_LIMIT = 0.30        # 单日回撤熔断阈值 30%
     COOLDOWN_MINUTES = 30              # 熔断冷静期
-    DCA_INTERRUPT_EXTRA_LOSS = 0.08    # 加仓耗尽后再亏 8%（价格层面）→ 中断平仓
+    DCA_INTERRUPT_EXTRA_LOSS = 0.05    # 调优v2：0.08→0.05，加仓耗尽后更早认赔止损
     ATR_SPIKE_BLOCK = 3.0              # ATR 突放大到均值 3 倍 → 禁止加仓（防单边）
+    # 调优v2 关键修复：马丁中断线改用含杠杆利润直接判断。
+    # 原版用 price_profit（除以杠杆）比较中断阈值，在 3x 杠杆下：
+    #   中断线(价格) = -(0.06*3+0.08) = -0.26
+    #   硬止损(价格) = -0.40/3 = -0.133
+    # 硬止损永远先触发 → 中断线是死代码 → 亏损单全部到 -40%。
+    # 改用 current_profit（含杠杆）直接判断，-0.20 < -0.40，中断线始终先触发。
+    MAX_LEVERAGED_LOSS = 0.20          # 加仓耗尽后，含杠杆亏损达 20% → 中断平仓
     EMA_SLOPE_BLOCK = 0.01             # [FIX#6] 趋势过滤斜率阈值（抽成常量便于复用）
 
     def __init__(self, *args, **kwargs):
@@ -237,8 +245,9 @@ class MemeMartingaleBaseStrategy(IStrategy):
 
         # 卫星仓（高风险马丁）只能用一半资金，再按最大加仓次数预留份额。
         satellite_budget = available * self.SATELLITE_RATIO
-        # 用倍数序列估算总弹药需求，反推首仓（与 adjust 的 1+0.2*i 倍数序列保持一致）
-        mult_seq = [1.0] + [1.0 + 0.2 * i for i in range(1, self.dca_max_entries.value + 1)]
+        # 用倍数序列估算总弹药需求，反推首仓
+        # 调优v2：与 adjust_trade_position 的 1+0.5*i 倍数序列保持一致
+        mult_seq = [1.0] + [1.0 + 0.5 * i for i in range(1, self.dca_max_entries.value + 1)]
         first_stake = satellite_budget / (sum(mult_seq) * max(self.MAX_OPEN_TRADES_HARD // 4, 1))
 
         # 单笔风险上限：首仓名义敞口不得超过总资金的 10%
@@ -264,6 +273,15 @@ class MemeMartingaleBaseStrategy(IStrategy):
           (2) 加仓冷却时间     —— 防止瀑布途中连续加仓踩刀
           (3) ATR 急速放大禁加 —— 单边行情识别，直接停手
         中断平仓在 custom_stoploss 处理（这里只能加/减仓）。
+
+        调优v2 关键修复：DCA 触发改用 current_profit（含杠杆）而非 price_profit。
+        原版用 price_profit（除以杠杆），在 3x 杠杆下：
+          DCA#1 需价格跌 6% → current_profit=-18% → 接近硬止损
+          DCA#2 需价格跌 12% → current_profit=-36% → 已超硬止损，永远不触发
+          DCA#3 需价格跌 18% → 不可能触发
+        改用 current_profit 后，DCA 在含杠杆亏损 6%/12%/18% 时触发，
+        与 MAX_LEVERAGED_LOSS=20% 中断线和 -40% 硬止损形成阶梯：
+          DCA#1 @ -6% → DCA#2 @ -12% → DCA#3 @ -18% → 中断 @ -20% → 硬止损 @ -40%
         """
         filled_entries = trade.nr_of_successful_entries  # 已成功加仓次数（含首仓）
 
@@ -271,16 +289,17 @@ class MemeMartingaleBaseStrategy(IStrategy):
         if filled_entries > self.dca_max_entries.value:
             return None
 
-        # [FIX#7] 把含杠杆收益率还原到价格层面，使 DCA 阈值不随杠杆漂移
-        price_profit = self._price_profit(trade, current_profit)
+        # 调优v2：DCA 触发改用 current_profit（含杠杆）
+        # 这样 DCA 阈值不随杠杆变化产生不可达的问题
+        # dca_step_pct=0.06 意味着含杠杆亏损 6% 触发第一次加仓
 
         # 浮盈时不加仓（马丁只在浮亏摊低成本时加）
-        if price_profit > -self.dca_step_pct.value:
+        if current_profit > -self.dca_step_pct.value:
             return None
 
-        # 检查是否触达下一档加仓阈值（阶梯式：-step, -2*step ...，价格层面）
+        # 检查是否触达下一档加仓阈值（阶梯式：-step, -2*step ...，含杠杆层面）
         next_trigger = -self.dca_step_pct.value * filled_entries
-        if price_profit > next_trigger:
+        if current_profit > next_trigger:
             return None
 
         # --- 保护(2)：加仓冷却 ---
@@ -315,8 +334,12 @@ class MemeMartingaleBaseStrategy(IStrategy):
         except Exception:
             first_stake = trade.stake_amount / max(filled_entries, 1)
 
-        # 计算本次加仓金额：递增倍数（与 custom_stake_amount 的预留序列一致）
-        multiplier = 1.0 + 0.2 * filled_entries
+        # 计算本次加仓金额：递增倍数
+        # 调优v2：1+0.2*i → 1+0.5*i，增强摊薄效果。
+        # 原版倍数太温和（1.0/1.2/1.4/1.6），3 级加仓后均价只降低 ~3%，
+        # 对妖币 10%+ 的反向波动几乎无济于事。
+        # 1+0.5*i（1.0/1.5/2.0/2.5）能让 3 级加仓后均价降低 ~6-8%，更有效。
+        multiplier = 1.0 + 0.5 * filled_entries
         add_stake = first_stake * multiplier
         add_stake = min(add_stake, max_stake)
 
@@ -335,20 +358,22 @@ class MemeMartingaleBaseStrategy(IStrategy):
                         after_fill: bool, **kwargs) -> Optional[float]:
         """
         返回值是"相对当前价的止损比例"。
-        [FIX#7] 中断阈值按价格层面比较；[FIX#2] 移动止盈用 stoploss_from_open() 正确换算。
+        调优v2 关键修复：中断判断改用 current_profit（含杠杆），
+        不再用 price_profit（除以杠杆），确保中断线在任何杠杆下都先于硬止损触发。
         """
         lev = max(getattr(trade, "leverage", 1.0) or 1.0, 1.0)
-        price_profit = current_profit / lev          # [FIX#7] 价格层面收益率
+        price_profit = current_profit / lev          # 价格层面收益率（用于止盈判断）
         filled_entries = trade.nr_of_successful_entries
 
-        # --- 马丁中断平仓：加仓耗尽 + 价格继续深跌 → 市价砍仓保命 ---
-        # 全策略最重要的一行风控：阻断"越跌越买直到爆仓"。
+        # --- 马丁中断平仓：加仓耗尽 + 含杠杆亏损达阈值 → 市价砍仓保命 ---
+        # 全策略最重要的风控：阻断"越跌越买直到爆仓"。
+        # 调优v2：原版用 price_profit 比较，在杠杆>1 时硬止损先触发=死代码。
+        #   改用 current_profit（含杠杆）直接判断，-0.20 始终先于 -0.40 硬止损。
         if filled_entries > self.dca_max_entries.value:
-            interrupt_level = -(self.dca_step_pct.value * self.dca_max_entries.value
-                                + self.DCA_INTERRUPT_EXTRA_LOSS)   # 价格层面阈值
-            if price_profit < interrupt_level:
+            if current_profit < -self.MAX_LEVERAGED_LOSS:
                 logger.warning(f"[{pair}] 马丁中断平仓触发 "
-                               f"price_profit={price_profit:.3f} (lev={lev:.1f})")
+                               f"current_profit={current_profit:.3f} (lev={lev:.1f}) "
+                               f"filled={filled_entries}/{self.dca_max_entries.value}")
                 return 0.0001  # 贴近现价 → stoploss=market 立即离场
 
         # --- 渐进式移动止盈：盈利达标后，把止损上移到"已实现一半利润"处 ---

@@ -1,40 +1,94 @@
 {
-  "strategy_name": "GateXingheGridProStrategy",
-  "params": {
-    "roi": {
-      "0": 0.06
-    },
-    "stoploss": {
-      "stoploss": -0.18
-    },
-    "trailing": {
-      "trailing_stop": true,
-      "trailing_stop_positive": 0.008,
-      "trailing_stop_positive_offset": 0.022,
-      "trailing_only_offset_is_reached": true
-    },
-    "max_open_trades": {
-      "max_open_trades": 20
-    },
-    "buy": {
-      "atr_grid_multiplier": 3.5,
-      "atr_period": 26,
-      "ema_fast_period": 40,
-      "ema_slow_period": 89,
-      "grid_growth_per_entry": 0.0,
-      "max_atr_pct": 0.072,
-      "max_grid_step_pct": 0.077,
-      "min_atr_pct": 0.0014,
-      "min_grid_step_pct": 0.013,
-      "volatility_period": 19,
-      "vote_threshold": 3
-    },
-    "sell": {
-      "deep_loss_fuse": -0.14,
-      "time_stop_candles": 450,
-      "tp_roi": 0.051
+  // ========== 基础运行 ==========
+  "$schema": "https://schema.freqtrade.io/schema.json",
+  "bot_name": "xinghe_major_btc_eth",
+  "max_open_trades": 2, // 只有 BTC/ETH 两个标的
+  "stake_currency": "USDT",
+  "stake_amount": "unlimited", // 交给策略 custom_stake_amount 按风险折算
+  "tradable_balance_ratio": 0.95,
+  "fiat_display_currency": "USD",
+  "dry_run": true, // ⚠️ 先跑 dry-run, 验证无误再改 false
+  "dry_run_wallet": 3000,
+  "cancel_open_orders_on_exit": true,
+  "timeframe": "5m",
+  // ========== 合约模式(关键) ==========
+  "trading_mode": "futures",
+  "margin_mode": "isolated", // 逐仓, 单标的爆仓不牵连另一个
+  // ========== 手续费 / 摩擦成本 ==========
+  // 单边 0.1%: 近似"真实taker + 半个价差 + 原生市价止损的平均滑点"
+  // 回测悲观化的一部分, 策略内滑点注入管不到市价止损, 靠这里补
+  "fee": 0.001,
+  // ========== 下单细节 ==========
+  "unfilledtimeout": {
+    "entry": 10, // 限价入场 10 分钟未成交即撤(避免追不上趋势)
+    "exit": 10,
+    "unit": "minutes",
+    "exit_timeout_count": 3
+  },
+  "entry_pricing": {
+    "price_side": "same", // 挂在同侧, 争取 maker
+    "use_order_book": true,
+    "order_book_top": 1,
+    "price_last_balance": 0.0,
+    "check_depth_of_market": {
+      "enabled": false,
+      "bids_to_ask_delta": 1
     }
   },
-  "ft_stratparam_v": 1,
-  "export_time": "2026-07-01 01:09:46.591120+00:00"
+  "exit_pricing": {
+    "price_side": "same",
+    "use_order_book": true,
+    "order_book_top": 1
+  },
+  // ========== 标的白名单(硬编码 BTC/ETH, 不用 VolumePairList 动态拉币) ==========
+  "exchange": {
+    "name": "gate",
+    "key": "在此填入你的API_KEY",
+    "secret": "在此填入你的API_SECRET",
+    "ccxt_config": {},
+    "ccxt_async_config": {},
+    "pair_whitelist": [
+      "BTC/USDT:USDT",
+      "ETH/USDT:USDT"
+    ],
+    "pair_blacklist": []
+  },
+  "pairlists": [
+    {
+      "method": "StaticPairList"
+    } // 固定两个标的, 不做动态筛选
+  ],
+  // ========== 风控(与策略内熔断互补, 这是 freqtrade 引擎层的硬保护) ==========
+  "protections": [
+    {
+      "method": "StoplossGuard",
+      "lookback_period_candles": 288, // 24h
+      "trade_limit": 3,
+      "stop_duration_candles": 24, // 触发后停 2h
+      "only_per_pair": false
+    },
+    {
+      "method": "MaxDrawdown",
+      "lookback_period_candles": 576, // 48h
+      "trade_limit": 6,
+      "stop_duration_candles": 48,
+      "max_allowed_drawdown": 0.20 // 与策略内 cb_daily_drawdown 对齐
+    },
+    {
+      "method": "CooldownPeriod",
+      "stop_duration_candles": 3 // 每笔平仓后冷却 15 分钟, 防手滑连开
+    }
+  ],
+  // ========== API server(可选, 用于监控) ==========
+  "api_server": {
+    "enabled": false,
+    "listen_ip_address": "127.0.0.1",
+    "listen_port": 8080,
+    "username": "改我",
+    "password": "改我"
+  },
+  "initial_state": "running",
+  "internals": {
+    "process_throttle_secs": 5
+  }
 }
